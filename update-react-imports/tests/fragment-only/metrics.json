@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "remove-default-import",
+        "file": "tests/fragment-only/input.tsx",
+        "reason": "only-jsx-usage"
+      },
+      "count": 1
+    }
+  ]
+}

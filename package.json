@@ -1,0 +1,28 @@
+{
+  "name": "jssg-react-codemods",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React codemods built with JSSG (JavaScript ast-grep)",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r test",
+    "test:use-context-hook": "pnpm --filter @react-codemods/use-context-hook test",
+    "test:update-react-imports": "pnpm --filter @react-codemods/update-react-imports test",
+    "test:replace-reactdom-render": "pnpm --filter @react-codemods/replace-reactdom-render test",
+    "test:replace-string-ref": "pnpm --filter @react-codemods/replace-string-ref test",
+    "test:rename-unsafe-lifecycles": "pnpm --filter @react-codemods/rename-unsafe-lifecycles test",
+    "check-types": "pnpm -r check-types"
+  },
+  "keywords": [
+    "codemod",
+    "react",
+    "jssg",
+    "ast-grep"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codemod/jssg-react-codemods.git"
+  },
+  "packageManager": "pnpm@9.14.2"
+}

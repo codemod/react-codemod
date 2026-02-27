@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-member-to-named",
+        "file": "tests/member-expression/input.tsx",
+        "members": "createElement"
+      },
+      "count": 1
+    }
+  ]
+}

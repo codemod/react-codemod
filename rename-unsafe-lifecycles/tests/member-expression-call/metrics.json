@@ -1,0 +1,11 @@
+{
+  "lifecycle-renames": [
+    {
+      "cardinality": {
+        "file": "tests/member-expression-call/input.tsx",
+        "lifecycles": "componentWillMount"
+      },
+      "count": 2
+    }
+  ]
+}

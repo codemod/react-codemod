@@ -1,0 +1,11 @@
+{
+  "use-context-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/react-member-expression/input.tsx",
+        "pattern": "React.useContext"
+      },
+      "count": 2
+    }
+  ]
+}

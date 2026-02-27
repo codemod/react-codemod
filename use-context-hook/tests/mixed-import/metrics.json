@@ -1,0 +1,11 @@
+{
+  "use-context-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/mixed-import/input.tsx",
+        "pattern": "useContext"
+      },
+      "count": 1
+    }
+  ]
+}

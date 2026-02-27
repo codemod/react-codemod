@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-codemods/use-context-hook"
+version: "0.1.0"
+description: "Transform React.useContext() and useContext() to use() hook"
+author: "React Codemods"
+license: "MIT"
+workflow: "workflow.yaml"
+
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["transformation", "migration"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

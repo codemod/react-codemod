@@ -1,0 +1,91 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  rename-unsafe-lifecycles:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  replace-reactdom-render:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  replace-string-ref:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  update-react-imports:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  use-context-hook:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+packages:
+
+  '@codemod.com/jssg-types@1.5.0':
+    resolution: {integrity: sha512-zChRbxI3hBSGrAHnWlEzOw1FztLWMMiarwcr0Wbk0On4hmv7dVgoUqpIHfxb64mEMKJ5syTIKY3ZNd8DcFQa5w==}
+
+  '@jssg/utils@0.0.2':
+    resolution: {integrity: sha512-eCQv5Xs9yfI6OKq2PQ8SyKsxPhdiaJY/XAFJmsZiVbsK5DIBBmGBA95CsyD4JFWXDKkNv6Q7ER/Kbp6/uWzB2w==}
+
+  typescript@5.9.3:
+    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+snapshots:
+
+  '@codemod.com/jssg-types@1.5.0': {}
+
+  '@jssg/utils@0.0.2': {}
+
+  typescript@5.9.3: {}

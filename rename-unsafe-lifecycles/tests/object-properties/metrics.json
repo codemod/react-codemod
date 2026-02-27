@@ -1,0 +1,11 @@
+{
+  "lifecycle-renames": [
+    {
+      "cardinality": {
+        "file": "tests/object-properties/input.tsx",
+        "lifecycles": "componentWillMount,componentWillReceiveProps"
+      },
+      "count": 2
+    }
+  ]
+}
