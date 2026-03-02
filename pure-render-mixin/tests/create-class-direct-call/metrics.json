@@ -1,0 +1,10 @@
+{
+  "pure-render-mixin-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/create-class-direct-call/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

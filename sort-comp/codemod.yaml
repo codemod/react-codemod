@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-codemods/sort-comp"
+version: "0.1.0"
+description: "Reorder React component methods to match eslint-plugin-react sort-comp rule"
+author: "React Codemods"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["transformation", "sort", "react", "sort-comp"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

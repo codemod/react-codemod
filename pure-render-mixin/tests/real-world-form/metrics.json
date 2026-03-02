@@ -1,0 +1,10 @@
+{
+  "pure-render-mixin-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/real-world-form/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

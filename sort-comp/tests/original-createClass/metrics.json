@@ -1,0 +1,10 @@
+{
+  "sort-comp-reorders": [
+    {
+      "cardinality": {
+        "file": "tests/original-createClass/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

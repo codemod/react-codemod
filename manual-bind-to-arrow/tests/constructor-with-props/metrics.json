@@ -1,0 +1,10 @@
+{
+  "manual-bind-to-arrow-transforms": [
+    {
+      "cardinality": {
+        "file": "tests/constructor-with-props/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

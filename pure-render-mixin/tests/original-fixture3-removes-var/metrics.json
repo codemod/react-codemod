@@ -1,0 +1,10 @@
+{
+  "pure-render-mixin-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/original-fixture3-removes-var/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

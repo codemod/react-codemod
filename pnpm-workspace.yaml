@@ -4,3 +4,6 @@ packages:
   - "replace-reactdom-render"
   - "replace-string-ref"
   - "rename-unsafe-lifecycles"
+  - "manual-bind-to-arrow"
+  - "sort-comp"
+  - "pure-render-mixin"
