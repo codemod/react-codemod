@@ -1,0 +1,10 @@
+{
+  "find-dom-node-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/enzyme-wrapper-style/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

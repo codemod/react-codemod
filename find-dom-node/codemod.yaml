@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-codemods/find-dom-node"
+version: "0.1.0"
+description: "Replace getDOMNode() with React.findDOMNode()"
+author: "React Codemods"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["transformation", "migration", "findDOMNode"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

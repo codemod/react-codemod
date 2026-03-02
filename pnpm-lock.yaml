@@ -6,7 +6,64 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+
+  error-boundaries:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  find-dom-node:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  manual-bind-to-arrow:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  pure-render-mixin:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  react-proptypes-to-prop-types:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.2
+        version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
 
   rename-unsafe-lifecycles:
     devDependencies:
@@ -35,6 +92,15 @@ importers:
       '@jssg/utils':
         specifier: ^0.0.2
         version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.0
+      typescript:
+        specifier: latest
+        version: 5.9.3
+
+  sort-comp:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest

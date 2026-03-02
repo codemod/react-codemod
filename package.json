@@ -24,5 +24,8 @@
     "type": "git",
     "url": "https://github.com/codemod/jssg-react-codemods.git"
   },
-  "packageManager": "pnpm@9.14.2"
+  "packageManager": "pnpm@9.14.2",
+  "dependencies": {
+    "@jssg/utils": "^0.0.2"
+  }
 }

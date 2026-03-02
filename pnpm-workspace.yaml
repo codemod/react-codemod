@@ -7,3 +7,6 @@ packages:
   - "manual-bind-to-arrow"
   - "sort-comp"
   - "pure-render-mixin"
+  - "react-proptypes-to-prop-types"
+  - "error-boundaries"
+  - "find-dom-node"

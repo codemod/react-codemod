@@ -1,0 +1,10 @@
+{
+  "find-dom-node-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/real-world-autosize-input/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

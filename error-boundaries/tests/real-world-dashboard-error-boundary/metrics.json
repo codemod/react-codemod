@@ -1,0 +1,10 @@
+{
+  "error-boundary-renames": [
+    {
+      "cardinality": {
+        "file": "tests/real-world-dashboard-error-boundary/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}
