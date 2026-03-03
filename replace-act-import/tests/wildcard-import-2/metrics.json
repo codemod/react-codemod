@@ -1,0 +1,11 @@
+{
+  "replace-act-import-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/wildcard-import-2/input.tsx",
+        "pattern": "member-call"
+      },
+      "count": 1
+    }
+  ]
+}

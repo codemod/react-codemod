@@ -1,0 +1,11 @@
+{
+  "replace-use-form-state-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/named-import-3/input.tsx",
+        "pattern": "named-import"
+      },
+      "count": 1
+    }
+  ]
+}

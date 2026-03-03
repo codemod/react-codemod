@@ -11,6 +11,14 @@
     "test:replace-reactdom-render": "pnpm --filter @react-codemods/replace-reactdom-render test",
     "test:replace-string-ref": "pnpm --filter @react-codemods/replace-string-ref test",
     "test:rename-unsafe-lifecycles": "pnpm --filter @react-codemods/rename-unsafe-lifecycles test",
+    "test:error-boundaries": "pnpm --filter @react-codemods/error-boundaries test",
+    "test:replace-act-import": "pnpm --filter @react-codemods/replace-act-import test",
+    "test:replace-use-form-state": "pnpm --filter @react-codemods/replace-use-form-state test",
+    "test:find-dom-node": "pnpm --filter @react-codemods/find-dom-node test",
+    "test:react-proptypes-to-prop-types": "pnpm --filter @react-codemods/react-proptypes-to-prop-types test",
+    "test:pure-render-mixin": "pnpm --filter @react-codemods/pure-render-mixin test",
+    "test:sort-comp": "pnpm --filter @react-codemods/sort-comp test",
+    "test:manual-bind-to-arrow": "pnpm --filter @react-codemods/manual-bind-to-arrow test",
     "check-types": "pnpm -r check-types"
   },
   "keywords": [

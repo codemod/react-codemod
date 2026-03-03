@@ -1,0 +1,11 @@
+{
+  "replace-act-import-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/re-export/input.tsx",
+        "pattern": "re-export"
+      },
+      "count": 1
+    }
+  ]
+}

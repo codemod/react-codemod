@@ -1,4 +1,6 @@
 packages:
+  - "replace-act-import"
+  - "replace-use-form-state"
   - "use-context-hook"
   - "update-react-imports"
   - "replace-reactdom-render"

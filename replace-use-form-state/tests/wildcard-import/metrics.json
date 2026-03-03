@@ -1,0 +1,11 @@
+{
+  "replace-use-form-state-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/wildcard-import/input.tsx",
+        "pattern": "member-call"
+      },
+      "count": 1
+    }
+  ]
+}

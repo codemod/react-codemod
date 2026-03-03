@@ -1,0 +1,11 @@
+{
+  "replace-act-import-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/default-import/input.tsx",
+        "pattern": "member-call"
+      },
+      "count": 1
+    }
+  ]
+}
