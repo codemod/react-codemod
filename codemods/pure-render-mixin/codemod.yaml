@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react/pure-render-mixin"
+version: "0.1.0"
+description: "Replace PureRenderMixin with shouldComponentUpdate using React.addons.shallowCompare"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

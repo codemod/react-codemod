@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-to-namespace",
+        "file": "tests/destructure-named-imports-variable-used/input.tsx",
+        "previous": "namespace"
+      },
+      "count": 1
+    }
+  ]
+}

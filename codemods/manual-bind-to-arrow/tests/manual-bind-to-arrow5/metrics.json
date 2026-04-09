@@ -1,0 +1,10 @@
+{
+  "manual-bind-to-arrow-transforms": [
+    {
+      "cardinality": {
+        "file": "tests/manual-bind-to-arrow5/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

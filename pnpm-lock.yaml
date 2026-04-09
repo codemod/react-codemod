@@ -11,17 +11,24 @@ importers:
       '@jssg/utils':
         specifier: ^0.0.2
         version: 0.0.2
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
 
-  error-boundaries:
+  codemods/error-boundaries:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  find-dom-node:
+  codemods/find-dom-node:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -29,30 +36,39 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  manual-bind-to-arrow:
+  codemods/manual-bind-to-arrow:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  pure-render-mixin:
+  codemods/pure-render-mixin:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  react-proptypes-to-prop-types:
+  codemods/react-proptypes-to-prop-types:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -60,21 +76,27 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  rename-unsafe-lifecycles:
+  codemods/rename-unsafe-lifecycles:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  replace-act-import:
+  codemods/replace-act-import:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -82,12 +104,15 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  replace-reactdom-render:
+  codemods/replace-reactdom-render:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -95,12 +120,15 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  replace-string-ref:
+  codemods/replace-string-ref:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -108,12 +136,15 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  replace-use-form-state:
+  codemods/replace-use-form-state:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -121,21 +152,27 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  sort-comp:
+  codemods/sort-comp:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  update-react-imports:
+  codemods/update-react-imports:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -143,12 +180,15 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
-  use-context-hook:
+  codemods/use-context-hook:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -156,28 +196,43 @@ importers:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
-        version: 1.5.0
+        version: 1.5.1
+      '@types/node':
+        specifier: latest
+        version: 25.5.2
       typescript:
         specifier: latest
-        version: 5.9.3
+        version: 6.0.2
 
 packages:
 
-  '@codemod.com/jssg-types@1.5.0':
-    resolution: {integrity: sha512-zChRbxI3hBSGrAHnWlEzOw1FztLWMMiarwcr0Wbk0On4hmv7dVgoUqpIHfxb64mEMKJ5syTIKY3ZNd8DcFQa5w==}
+  '@codemod.com/jssg-types@1.5.1':
+    resolution: {integrity: sha512-pCngSoz7hpNiMMkoVi+b4uqy7cA2XuJqEaOx52KYN/25bOdzJ7IqU9DEMukOKnWyFt9iy3UBinayit1P1+9wXA==}
 
   '@jssg/utils@0.0.2':
     resolution: {integrity: sha512-eCQv5Xs9yfI6OKq2PQ8SyKsxPhdiaJY/XAFJmsZiVbsK5DIBBmGBA95CsyD4JFWXDKkNv6Q7ER/Kbp6/uWzB2w==}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  '@types/node@25.5.2':
+    resolution: {integrity: sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg==}
+
+  typescript@6.0.2:
+    resolution: {integrity: sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ==}
     engines: {node: '>=14.17'}
     hasBin: true
 
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
+
 snapshots:
 
-  '@codemod.com/jssg-types@1.5.0': {}
+  '@codemod.com/jssg-types@1.5.1': {}
 
   '@jssg/utils@0.0.2': {}
 
-  typescript@5.9.3: {}
+  '@types/node@25.5.2':
+    dependencies:
+      undici-types: 7.18.2
+
+  typescript@6.0.2: {}
+
+  undici-types@7.18.2: {}

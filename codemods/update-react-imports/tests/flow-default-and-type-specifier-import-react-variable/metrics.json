@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-member-to-named",
+        "file": "tests/flow-default-and-type-specifier-import-react-variable/input.tsx",
+        "previous": "default"
+      },
+      "count": 1
+    }
+  ]
+}

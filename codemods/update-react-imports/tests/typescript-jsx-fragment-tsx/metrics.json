@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "remove-react-import",
+        "file": "tests/typescript-jsx-fragment-tsx/input.tsx",
+        "previous": "namespace"
+      },
+      "count": 1
+    }
+  ]
+}

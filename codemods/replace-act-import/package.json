@@ -1,0 +1,18 @@
+{
+  "name": "@react/replace-act-import",
+  "version": "0.1.0",
+  "description": "Migrate act() from react-dom/test-utils to react",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "typescript": "latest",
+    "@types/node": "latest"
+  },
+  "dependencies": {
+    "@jssg/utils": "^0.0.2"
+  }
+}

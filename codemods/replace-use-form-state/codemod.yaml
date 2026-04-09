@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react/replace-use-form-state"
+version: "0.1.0"
+description: "Rename useFormState to useActionState in react-dom imports and usages"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

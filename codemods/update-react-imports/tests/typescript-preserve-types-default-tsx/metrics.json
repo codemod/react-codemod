@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-to-namespace",
+        "file": "tests/typescript-preserve-types-default-tsx/input.tsx",
+        "previous": "default"
+      },
+      "count": 1
+    }
+  ]
+}

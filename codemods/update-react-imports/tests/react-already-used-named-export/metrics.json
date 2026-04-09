@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-to-namespace",
+        "file": "tests/react-already-used-named-export/input.tsx",
+        "previous": "namespace"
+      },
+      "count": 1
+    }
+  ]
+}

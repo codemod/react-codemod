@@ -1,0 +1,11 @@
+{
+  "params": {
+    "methodsOrder": [
+      "componentDidMount",
+      "mixins",
+      "everything-else",
+      "/^render.+$/",
+      "render"
+    ]
+  }
+}
