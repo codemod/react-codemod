@@ -1,0 +1,10 @@
+{
+  "pure-component-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/arrow/input.tsx"
+      },
+      "count": 5
+    }
+  ]
+}

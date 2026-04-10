@@ -1,0 +1,15 @@
+{
+  "name": "@react/pure-component",
+  "version": "0.1.0",
+  "description": "Convert simple React classes into pure function components",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts --strictness loose",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

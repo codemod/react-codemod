@@ -1,0 +1,18 @@
+{
+  "name": "@react/react-native-view-prop-types",
+  "version": "0.1.0",
+  "description": "Replace View.propTypes with ViewPropTypes",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts --strictness loose",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  },
+  "dependencies": {
+    "@jssg/utils": "^0.0.2"
+  }
+}

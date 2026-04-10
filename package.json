@@ -17,9 +17,14 @@
     "test:find-dom-node": "pnpm --filter @react/find-dom-node test",
     "test:react-proptypes-to-prop-types": "pnpm --filter @react/react-proptypes-to-prop-types test",
     "test:pure-render-mixin": "pnpm --filter @react/pure-render-mixin test",
+    "test:pure-component": "pnpm --filter @react/pure-component test",
     "test:sort-comp": "pnpm --filter @react/sort-comp test",
     "test:manual-bind-to-arrow": "pnpm --filter @react/manual-bind-to-arrow test",
     "test:create-element-to-jsx": "pnpm --filter @react/create-element-to-jsx test",
+    "test:remove-context-provider": "pnpm --filter @react/remove-context-provider test",
+    "test:remove-forward-ref": "pnpm --filter @react/remove-forward-ref test",
+    "test:react-dom-to-react-dom-factories": "pnpm --filter @react/react-dom-to-react-dom-factories test",
+    "test:react-native-view-prop-types": "pnpm --filter @react/react-native-view-prop-types test",
     "check-types": "pnpm -r check-types"
   },
   "keywords": [

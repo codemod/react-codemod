@@ -1,0 +1,10 @@
+{
+  "remove-forward-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/callee-is-member-expression/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}
