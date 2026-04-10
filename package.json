@@ -25,6 +25,7 @@
     "test:remove-forward-ref": "pnpm --filter @react/remove-forward-ref test",
     "test:react-dom-to-react-dom-factories": "pnpm --filter @react/react-dom-to-react-dom-factories test",
     "test:react-native-view-prop-types": "pnpm --filter @react/react-native-view-prop-types test",
+    "test:react-to-react-dom": "pnpm --filter @react/react-to-react-dom test",
     "check-types": "pnpm -r check-types"
   },
   "keywords": [
