@@ -19,6 +19,7 @@
     "test:pure-render-mixin": "pnpm --filter @react/pure-render-mixin test",
     "test:sort-comp": "pnpm --filter @react/sort-comp test",
     "test:manual-bind-to-arrow": "pnpm --filter @react/manual-bind-to-arrow test",
+    "test:create-element-to-jsx": "pnpm --filter @react/create-element-to-jsx test",
     "check-types": "pnpm -r check-types"
   },
   "keywords": [

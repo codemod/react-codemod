@@ -1,0 +1,10 @@
+{
+  "create-element-to-jsx-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/escaped-string/input.tsx"
+      },
+      "count": 5
+    }
+  ]
+}
