@@ -3,7 +3,6 @@
     {
       "cardinality": {
         "action": "convert-member-to-named",
-        "file": "tests/react-fragment-member/input.tsx",
         "members": "Fragment"
       },
       "count": 2

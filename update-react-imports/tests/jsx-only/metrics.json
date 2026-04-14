@@ -3,7 +3,6 @@
     {
       "cardinality": {
         "action": "remove-default-import",
-        "file": "tests/jsx-only/input.tsx",
         "reason": "only-jsx-usage"
       },
       "count": 1

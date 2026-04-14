@@ -3,7 +3,6 @@
     {
       "cardinality": {
         "action": "convert-to-namespace",
-        "file": "tests/react-as-value/input.tsx",
         "reason": "react-used-as-value"
       },
       "count": 1

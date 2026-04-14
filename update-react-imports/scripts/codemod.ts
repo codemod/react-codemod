@@ -76,18 +76,27 @@ const transform: Transform<TSX> = async (root) => {
   const isReactUsedAsValue = reactAsValue.length > 0;
 
   if (isReactUsedAsValue) {
-    const newImportText = `import * as ${reactName} from "react";`;
     const importStatement = reactDefaultImport.node.ancestors().find(
-      (a) => a.kind() === "import_statement"
+      (a) => a.kind() === "import_statement",
     );
     if (importStatement) {
-      edits.push(importStatement.replace(newImportText));
+      const source = importStatement.field("source");
+      const sourceText = source?.text() ?? '"react"';
+      const namedImports = importStatement.find({
+        rule: { kind: "named_imports" },
+      });
+      const namespaceLine = `import * as ${reactName} from ${sourceText};`;
+      if (namedImports) {
+        const namedLine = `import ${namedImports.text()} from ${sourceText};`;
+        edits.push(importStatement.replace(`${namespaceLine}\n${namedLine}`));
+      } else {
+        edits.push(importStatement.replace(namespaceLine));
+      }
     }
 
     transformMetric.increment({
       action: "convert-to-namespace",
       reason: "react-used-as-value",
-      file: root.filename(),
     });
   } else if (reactMemberUsages.size > 0) {
     const namedImportsToAdd: string[] = [];
@@ -115,21 +124,40 @@ const transform: Transform<TSX> = async (root) => {
     transformMetric.increment({
       action: "convert-member-to-named",
       members: namedList,
-      file: root.filename(),
     }, totalConversions);
   } else {
+    const importStatement = reactDefaultImport.node.ancestors().find(
+      (a) => a.kind() === "import_statement",
+    );
+    if (!importStatement) {
+      return null;
+    }
 
-    const removeEdit = removeImport(rootNode, {
-      type: "default",
-      from: "react",
+    const namedImports = importStatement.find({
+      rule: { kind: "named_imports" },
     });
-    if (removeEdit) {
-      edits.push(removeEdit);
+
+    if (namedImports) {
+      const source = importStatement.field("source");
+      const sourceText = source?.text() ?? '"react"';
+      const newImportText = `import ${namedImports.text()} from ${sourceText};`;
+      edits.push(importStatement.replace(newImportText));
       transformMetric.increment({
         action: "remove-default-import",
         reason: "only-jsx-usage",
-        file: root.filename(),
       });
+    } else {
+      const removeEdit = removeImport(rootNode, {
+        type: "default",
+        from: "react",
+      });
+      if (removeEdit) {
+        edits.push(removeEdit);
+        transformMetric.increment({
+          action: "remove-default-import",
+          reason: "only-jsx-usage",
+        });
+      }
     }
   }
 
