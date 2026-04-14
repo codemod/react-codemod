@@ -2,7 +2,7 @@
   "sort-comp-reorders": [
     {
       "cardinality": {
-        "file": "tests/custom-sort-custom-sort/input.tsx",
+        "file": "tests/custom-sort/input.tsx",
         "kind": "createClass"
       },
       "count": 1

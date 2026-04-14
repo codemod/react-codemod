@@ -4,12 +4,12 @@
   "description": "Reorder React component methods to match eslint-plugin-react sort-comp rule",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts && node --test ./scripts/parity-tests.mjs",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
     "@codemod.com/jssg-types": "latest",
-    "typescript": "latest",
-    "@types/node": "latest"
+    "@types/node": "latest",
+    "typescript": "latest"
   }
 }

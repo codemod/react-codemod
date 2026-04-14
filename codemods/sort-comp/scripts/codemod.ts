@@ -1,6 +1,9 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import * as fs from "fs";
+import path from "path";
+import { pathToFileURL } from "url";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -190,6 +193,301 @@ const DEFAULT_METHODS_ORDER = [
   "render",
 ];
 
+type SortCompRuleConfig = {
+  order?: string[];
+  groups?: Record<string, string[]>;
+};
+
+const ESLINT_CONFIG_FILES = [
+  ".eslintrc",
+  ".eslintrc.json",
+  ".eslintrc.yaml",
+  ".eslintrc.yml",
+  ".eslintrc.js",
+  ".eslintrc.cjs",
+  ".eslintrc.mjs",
+  "package.json",
+];
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function stringArrayParam(value: unknown): string[] | null {
+  if (isStringArray(value)) return value;
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isStringArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isGroupsMap(value: unknown): value is Record<string, string[]> {
+  return typeof value === "object" &&
+    value !== null &&
+    Object.values(value).every((entry) => isStringArray(entry));
+}
+
+function normalizeSortCompRuleConfig(value: unknown): SortCompRuleConfig | null {
+  if (typeof value !== "object" || value === null) return null;
+  const maybeConfig = value as { order?: unknown; groups?: unknown };
+  const config: SortCompRuleConfig = {};
+  if (maybeConfig.order !== undefined) {
+    if (!isStringArray(maybeConfig.order)) return null;
+    config.order = maybeConfig.order;
+  }
+  if (maybeConfig.groups !== undefined) {
+    if (!isGroupsMap(maybeConfig.groups)) return null;
+    config.groups = maybeConfig.groups;
+  }
+  return config;
+}
+
+async function getMethodsOrderFromEslint(filePath: string): Promise<string[] | null> {
+  let dir = path.dirname(filePath);
+  while (true) {
+    for (const configName of ESLINT_CONFIG_FILES) {
+      const configPath = path.join(dir, configName);
+      const methodsOrder = await methodsOrderFromConfigFile(configPath, new Set<string>());
+      if (methodsOrder) return methodsOrder;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+function resolveMethodsOrder(ruleConfig: SortCompRuleConfig): string[] | null {
+  if (!ruleConfig.order) return null;
+  const groups = ruleConfig.groups ?? {};
+  const resolvedOrder: string[] = [];
+  for (const entry of ruleConfig.order) {
+    const groupEntries = groups[entry];
+    if (groupEntries) {
+      resolvedOrder.push(...groupEntries);
+    } else {
+      resolvedOrder.push(entry);
+    }
+  }
+  return resolvedOrder;
+}
+
+function yamlRuleConfig(text: string): SortCompRuleConfig | null {
+  const lines = text.split("\n");
+  const sortCompIndex = lines.findIndex((line) => line.trim() === "react/sort-comp:");
+  if (sortCompIndex === -1) return null;
+
+  const ruleConfig: SortCompRuleConfig = {};
+  let mode: "order" | "groups" | "group-items" | null = null;
+  let currentGroup: string | null = null;
+
+  for (let i = sortCompIndex + 1; i < lines.length; i++) {
+    const line = lines[i]!;
+    const trimmed = line.trim();
+    if (trimmed === "") continue;
+    const indent = line.match(/^ */)?.[0].length ?? 0;
+    if (indent <= 2) break;
+    if (trimmed === "- 0" || trimmed === "- off" || trimmed === "- warn" || trimmed === "- error") continue;
+
+    if (trimmed === "- order:" || trimmed === "order:") {
+      ruleConfig.order = [];
+      mode = "order";
+      currentGroup = null;
+      continue;
+    }
+
+    if (trimmed === "groups:" || trimmed === "- groups:") {
+      ruleConfig.groups = {};
+      mode = "groups";
+      currentGroup = null;
+      continue;
+    }
+
+    if (mode === "order" && trimmed.startsWith("- ")) {
+      ruleConfig.order?.push(trimmed.slice(2));
+      continue;
+    }
+
+    if ((mode === "groups" || mode === "group-items") && trimmed.endsWith(":") && !trimmed.startsWith("- ")) {
+      currentGroup = trimmed.slice(0, -1);
+      ruleConfig.groups ??= {};
+      ruleConfig.groups[currentGroup] = [];
+      mode = "group-items";
+      continue;
+    }
+
+    if (mode === "group-items" && currentGroup && trimmed.startsWith("- ")) {
+      ruleConfig.groups?.[currentGroup]?.push(trimmed.slice(2));
+      continue;
+    }
+  }
+
+  return ruleConfig.order ? ruleConfig : null;
+}
+
+async function loadConfigFile(configPath: string): Promise<unknown | null> {
+  const basename = path.basename(configPath);
+  if (basename === "package.json") {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as { eslintConfig?: unknown };
+      return parsed.eslintConfig ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  if (configPath.endsWith(".js") || configPath.endsWith(".cjs") || configPath.endsWith(".mjs")) {
+    try {
+      const imported = await import(pathToFileURL(configPath).href);
+      return ("default" in imported ? imported.default : imported) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  let text: string;
+  try {
+    text = fs.readFileSync(configPath, "utf8");
+  } catch {
+    return null;
+  }
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("{")) {
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  return { rules: { "react/sort-comp": [0, yamlRuleConfig(text)] } };
+}
+
+function directRuleConfig(config: unknown): SortCompRuleConfig | null {
+  if (typeof config !== "object" || config === null) return null;
+  const maybeRules = (config as { rules?: unknown }).rules;
+  if (typeof maybeRules !== "object" || maybeRules === null) return null;
+  const sortCompRule = (maybeRules as Record<string, unknown>)["react/sort-comp"];
+  if (!Array.isArray(sortCompRule) || sortCompRule.length < 2) return null;
+  return normalizeSortCompRuleConfig(sortCompRule[1]);
+}
+
+function normalizeExtends(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  return isStringArray(value) ? value : [];
+}
+
+function resolveRelativeExtend(baseDir: string, specifier: string): string | null {
+  if (!specifier.startsWith(".") && !path.isAbsolute(specifier)) return null;
+  const candidates = [
+    specifier,
+    `${specifier}.js`,
+    `${specifier}.cjs`,
+    `${specifier}.mjs`,
+    `${specifier}.json`,
+    `${specifier}.yaml`,
+    `${specifier}.yml`,
+  ].map((candidate) => path.resolve(baseDir, candidate));
+  for (const candidate of candidates) {
+    try {
+      fs.readFileSync(candidate, "utf8");
+      return candidate;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function tryReadText(filePath: string): string | null {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function resolvePackageExtend(baseDir: string, specifier: string): string | null {
+  if (specifier.startsWith(".") || path.isAbsolute(specifier) || specifier.startsWith("eslint:") || specifier.startsWith("plugin:")) {
+    return null;
+  }
+
+  const parts = specifier.split("/");
+  const isScoped = specifier.startsWith("@");
+  const packagePartLength = isScoped ? 2 : 1;
+  const packageName = parts.slice(0, packagePartLength).join("/");
+  const subpath = parts.slice(packagePartLength).join("/");
+  const packageCandidates = (() => {
+    if (isScoped) {
+      const [scope, name] = packageName.split("/");
+      return name.startsWith("eslint-config-")
+        ? [packageName]
+        : [packageName, `${scope}/eslint-config-${name}`];
+    }
+    return packageName.startsWith("eslint-config-")
+      ? [packageName]
+      : [packageName, `eslint-config-${packageName}`];
+  })();
+
+  let dir = baseDir;
+  while (true) {
+    for (const packageCandidate of packageCandidates) {
+      const packageRoot = path.join(dir, "node_modules", packageCandidate);
+      const directCandidate = subpath
+        ? resolveRelativeExtend(packageRoot, subpath)
+        : null;
+      if (directCandidate) return directCandidate;
+
+      const packageJsonPath = path.join(packageRoot, "package.json");
+      const packageJsonText = tryReadText(packageJsonPath);
+      if (packageJsonText) {
+        try {
+          const pkg = JSON.parse(packageJsonText) as { main?: string };
+          const mainField = typeof pkg.main === "string" ? pkg.main : "index.js";
+          const mainCandidate = resolveRelativeExtend(packageRoot, mainField);
+          if (mainCandidate) return mainCandidate;
+        } catch {
+          // ignore malformed package json
+        }
+      }
+
+      const indexCandidate = resolveRelativeExtend(packageRoot, "index");
+      if (indexCandidate) return indexCandidate;
+    }
+
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+async function methodsOrderFromConfigFile(
+  configPath: string,
+  seen: Set<string>,
+): Promise<string[] | null> {
+  if (seen.has(configPath)) return null;
+  seen.add(configPath);
+
+  const config = await loadConfigFile(configPath);
+  const direct = directRuleConfig(config);
+  const resolvedDirect = direct ? resolveMethodsOrder(direct) : null;
+  if (resolvedDirect) return resolvedDirect;
+
+  if (typeof config !== "object" || config === null) return null;
+  const extendsEntries = normalizeExtends((config as { extends?: unknown }).extends);
+  for (const entry of extendsEntries) {
+    const resolvedPath = resolveRelativeExtend(path.dirname(configPath), entry) ??
+      resolvePackageExtend(path.dirname(configPath), entry);
+    if (!resolvedPath) continue;
+    const resolvedOrder = await methodsOrderFromConfigFile(resolvedPath, seen);
+    if (resolvedOrder) return resolvedOrder;
+  }
+
+  return null;
+}
+
 function isTypeAnnotationMember(node: SgNode<TSX>): boolean {
   return node.kind() === "public_field_definition" &&
     node.field("value") === null &&
@@ -227,10 +525,11 @@ function correctIndex(order: string[], chunk: MemberChunk): number {
 }
 
 function memberName(node: SgNode<TSX>): string {
-  if (node.kind() === "method_definition" || node.kind() === "public_field_definition") {
-    return node.field("name")?.text() ?? "";
-  }
-  return node.field("key")?.text() ?? "";
+  const fieldName = node.field("name")?.text() ?? node.field("key")?.text();
+  if (fieldName) return fieldName;
+  return node.children().find((child) =>
+    child.kind() === "property_identifier" || child.kind() === "identifier"
+  )?.text() ?? "";
 }
 
 function significantChildren(container: SgNode<TSX>): SgNode<TSX>[] {
@@ -300,10 +599,9 @@ const transform: Transform<TSX> = async (root, options) => {
   const source = rootNode.text();
   const edits: Edit[] = [];
   const metric = useMetricAtom("sort-comp-reorders");
-  const methodsOrderParam = options.params?.methodsOrder as unknown;
-  const methodsOrder = Array.isArray(methodsOrderParam)
-    ? methodsOrderParam.filter((item): item is string => typeof item === "string")
-    : DEFAULT_METHODS_ORDER;
+  const methodsOrder = stringArrayParam(options.params?.methodsOrder) ??
+    await getMethodsOrderFromEslint(root.filename()) ??
+    DEFAULT_METHODS_ORDER;
 
   for (const config of reactCreateClassConfigs(rootNode)) {
     const edit = replacementFor(config, collectChunks(config, source), methodsOrder, ",\n\n  ");

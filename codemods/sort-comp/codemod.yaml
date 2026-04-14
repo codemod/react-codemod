@@ -16,4 +16,5 @@ registry:
   access: "public"
   visibility: "public"
 
-capabilities: []
+capabilities:
+  - fs
