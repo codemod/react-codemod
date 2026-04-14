@@ -108,6 +108,70 @@ function getPairKeyName(node: SgNode<TSX>): string {
   return node.field("key")?.text() ?? node.field("name")?.text() ?? "";
 }
 
+function declarationRemovalRange(varDecl: SgNode<TSX>, source: string): { start: number; end: number } {
+  let start = varDecl.range().start.index;
+  let end = varDecl.range().end.index;
+  const before = source.slice(0, start);
+  const after = source.slice(end);
+  if (after.startsWith("\n\n")) {
+    end += 1;
+  }
+  if (before.endsWith("\n\n") && after.startsWith("\n\n")) {
+    start -= 1;
+  }
+  return { start, end };
+}
+
+function shouldUpdatePropertyText(): string {
+  return `${SHOULD_COMPONENT_UPDATE}: function(nextProps, nextState) {\n    return React.addons.shallowCompare(this, nextProps, nextState);\n  }`;
+}
+
+function renderConfigObject(configObj: SgNode<TSX>, mixinsPair: SgNode<TSX>, mixinName: string): string | null {
+  const mixinsValue = mixinsPair.field("value");
+  if (!mixinsValue || mixinsValue.kind() !== "array") return null;
+  const mixinInArray = mixinsValue.findAll(arrayIdentifierNamedRule(mixinName));
+  if (mixinInArray.length === 0) return null;
+
+  const toRemoveSet = new Set(mixinInArray.map((n) => n.range().start.index));
+  const kept = mixinsValue.children().filter(
+    (c) =>
+      c.kind() !== "[" &&
+      c.kind() !== "]" &&
+      c.kind() !== "," &&
+      !toRemoveSet.has(c.range().start.index),
+  );
+
+  const pairs = configObj.findAll(PAIR_RULE)
+    .sort((a, b) => a.range().start.index - b.range().start.index);
+  const renderedProps: string[] = [];
+  let renderIndex = -1;
+
+  for (const pair of pairs) {
+    if (pair.id() === mixinsPair.id()) {
+      if (kept.length > 0) {
+        renderedProps.push(`mixins: [${kept.map((e) => e.text()).join(", ")}]`);
+      }
+      continue;
+    }
+
+    if (getPairKeyName(pair) === RENDER) {
+      renderIndex = renderedProps.length;
+    }
+    renderedProps.push(pair.text());
+  }
+
+  if (renderedProps.length === 0) return null;
+
+  const shouldUpdateText = shouldUpdatePropertyText();
+  if (renderIndex >= 0 && renderIndex === renderedProps.length - 1) {
+    renderedProps.splice(renderIndex, 0, shouldUpdateText);
+  } else {
+    renderedProps.push(shouldUpdateText);
+  }
+
+  return `{\n  ${renderedProps.join(",\n\n  ")},\n}`;
+}
+
 const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
   if (!explicitRequireDisabled(options.params?.["explicit-require"]) && !hasReact(rootNode)) {
@@ -136,56 +200,9 @@ const transform: Transform<TSX> = async (root, options) => {
     const mixinInArray = value.findAll(arrayIdentifierNamedRule(mixinName));
     if (mixinInArray.length === 0) continue;
 
-    const toRemoveSet = new Set(mixinInArray.map((n) => n.range().start.index));
-    const kept = value.children().filter(
-      (c) =>
-        c.kind() !== "[" &&
-        c.kind() !== "]" &&
-        c.kind() !== "," &&
-        !toRemoveSet.has(c.range().start.index),
-    );
-    const newArrayText = kept.length === 0 ? "[]" : "[" + kept.map((e) => e.text()).join(", ") + "]";
-
-    const allPairs = configObj.findAll(PAIR_RULE);
-    allPairs.sort((a, b) => a.range().start.index - b.range().start.index);
-    const mixinsIdx = allPairs.findIndex((p) => p.range().start.index === mixinsPair.range().start.index);
-    const nextPair = mixinsIdx >= 0 && mixinsIdx < allPairs.length - 1 ? allPairs[mixinsIdx + 1]! : null;
-    const prevPair = mixinsIdx > 0 ? allPairs[mixinsIdx - 1]! : null;
-
-    if (newArrayText === "[]") {
-      const removeStart = nextPair
-        ? mixinsPair.range().start.index
-        : prevPair
-          ? prevPair.range().end.index
-          : mixinsPair.range().start.index;
-      const removeEnd = nextPair
-        ? nextPair.range().start.index
-        : mixinsPair.range().end.index;
-      edits.push({
-        startPos: removeStart,
-        endPos: removeEnd,
-        insertedText: "",
-      });
-    } else {
-      const newMixinsText = `mixins: ${newArrayText}`;
-      edits.push(mixinsPair.replace(newMixinsText));
-    }
-
-    const allPairsByPosition = [...allPairs].sort((a, b) => a.range().start.index - b.range().start.index);
-    const lastPair = allPairsByPosition[allPairsByPosition.length - 1]!;
-    const insertBeforeRender = getPairKeyName(lastPair) === RENDER;
-    const insertPos = insertBeforeRender ? renderPair.range().start.index : lastPair.range().end.index;
-    const beforeInsert = source.slice(Math.max(0, insertPos - 30), insertPos);
-    const indentMatch = beforeInsert.match(/\n(\s*)$/);
-    const indent = indentMatch ? indentMatch[1] : "  ";
-    const shouldUpdateBlock = insertBeforeRender
-      ? `${indent}${SHOULD_COMPONENT_UPDATE}: function(nextProps, nextState) {\n${indent}  return React.addons.shallowCompare(this, nextProps, nextState);\n${indent}},\n${indent}`
-      : `,\n\n${indent}${SHOULD_COMPONENT_UPDATE}: function(nextProps, nextState) {\n${indent}  return React.addons.shallowCompare(this, nextProps, nextState);\n${indent}}`;
-    edits.push({
-      startPos: insertPos,
-      endPos: insertPos,
-      insertedText: shouldUpdateBlock,
-    });
+    const newConfigText = renderConfigObject(configObj, mixinsPair, mixinName);
+    if (!newConfigText) continue;
+    edits.push(configObj.replace(newConfigText));
 
     transformCount++;
     metric.increment({ file: metricFile(root.filename()) });
@@ -209,10 +226,10 @@ const transform: Transform<TSX> = async (root, options) => {
         const decls = varDecl.findAll({ rule: { kind: "variable_declarator" } });
         if (decls.length !== 1) continue;
         const after = source.slice(varDecl.range().end.index, varDecl.range().end.index + 10);
-        const trailing = after.match(/^(\s*\n?)/)?.[1] ?? "\n";
+        const range = declarationRemovalRange(varDecl, source);
         edits.push({
-          startPos: varDecl.range().start.index,
-          endPos: varDecl.range().end.index + trailing.length,
+          startPos: range.start,
+          endPos: range.end,
           insertedText: "",
         });
         break;

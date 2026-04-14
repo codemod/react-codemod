@@ -19,3 +19,5 @@ codemod run @react/pure-render-mixin
 pnpm test
 pnpm check-types
 ```
+
+The checked-in `tests/` directory preserves the exact legacy fixture surface. Additional rollout-safety parity cases are verified in `scripts/parity-tests.mjs`.

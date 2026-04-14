@@ -3,11 +3,8 @@ var React = require('react/addons');
 var PureRenderMixin = React.addons.PureRenderMixin;
 
 var MyComponent = React.createClass({
-  
   shouldComponentUpdate: function(nextProps, nextState) {
-
     return React.addons.shallowCompare(this, nextProps, nextState);
-
   },
 
   render: function() {
@@ -18,11 +15,8 @@ var MyComponent = React.createClass({
 var MyMixedComponent = React.createClass({
   mixins: [SomeOtherMixin],
 
-  
   shouldComponentUpdate: function(nextProps, nextState) {
-
     return React.addons.shallowCompare(this, nextProps, nextState);
-
   },
 
   render: function() {
