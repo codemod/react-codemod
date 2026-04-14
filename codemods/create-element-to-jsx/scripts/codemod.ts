@@ -8,6 +8,31 @@ type Conversion = {
   hasComments: boolean;
 };
 
+type TagDescriptor = {
+  text: string;
+  trailingComments: string[];
+};
+
+type AttrDescriptor = {
+  leadingBlocks: string[];
+  inline: string;
+  hasComments: boolean;
+};
+
+type RenderedElement = {
+  core: string;
+  count: number;
+  leadingComments: string[];
+  trailingComments: string[];
+  hasComments: boolean;
+  wrappedChildTrailingComments?: string[];
+};
+
+type ArgumentLayout = {
+  args: SgNode<TSX>[];
+  boundaryComments: SgNode<TSX>[][];
+};
+
 const REACT_MODULES = new Set(["React", "react", "react/addons", "react-native"]);
 
 function metricFile(filename: string): string {
@@ -162,6 +187,442 @@ function ownCommentTexts(call: SgNode<TSX>): string[] {
     .filter((comment) => closestCreateElementAncestor(comment)?.id() === call.id())
     .sort((left, right) => left.range().start.index - right.range().start.index)
     .map((comment) => comment.text());
+}
+
+function ownCommentNodes(call: SgNode<TSX>): SgNode<TSX>[] {
+  return call.findAll({ rule: { kind: "comment" } })
+    .filter((comment) => closestCreateElementAncestor(comment)?.id() === call.id())
+    .sort((left, right) => left.range().start.index - right.range().start.index);
+}
+
+function directCommentNodes(node: SgNode<TSX> | null): SgNode<TSX>[] {
+  if (!node) {
+    return [];
+  }
+
+  return node.children()
+    .filter((child) => child.kind() === "comment")
+    .sort((left, right) => left.range().start.index - right.range().start.index);
+}
+
+function directCommentTexts(node: SgNode<TSX> | null): string[] {
+  return directCommentNodes(node).map((comment) => comment.text());
+}
+
+function subtractComments(comments: SgNode<TSX>[], excluded: SgNode<TSX>[]): SgNode<TSX>[] {
+  const excludedIds = new Set(excluded.map((comment) => comment.id()));
+  return comments.filter((comment) => !excludedIds.has(comment.id()));
+}
+
+function splitDirectComments(node: SgNode<TSX>, comments = directCommentNodes(node)): {
+  before: SgNode<TSX>[];
+  after: SgNode<TSX>[];
+  all: SgNode<TSX>[];
+} {
+  const nodeText = node.text();
+  const nodeStart = node.range().start.index;
+  const nodeEnd = node.range().end.index;
+  let tokenStart = nodeStart;
+  let tokenEnd = nodeEnd;
+
+  if (comments.length > 0) {
+    const start = Math.min(nodeStart, ...comments.map((comment) => comment.range().start.index));
+    const end = Math.max(nodeEnd, ...comments.map((comment) => comment.range().end.index));
+    const segment = node.getRoot().root().text().slice(start, end);
+    const tokenOffset = segment.indexOf(nodeText);
+    if (tokenOffset >= 0) {
+      tokenStart = start + tokenOffset;
+      tokenEnd = tokenStart + nodeText.length;
+    }
+  }
+
+  return {
+    before: comments.filter((comment) => comment.range().end.index <= tokenStart),
+    after: comments.filter((comment) => comment.range().start.index >= tokenEnd),
+    all: comments,
+  };
+}
+
+function joinCommentTexts(comments: SgNode<TSX>[], source: string): string {
+  if (comments.length === 0) {
+    return "";
+  }
+
+  let text = comments[0]!.text();
+  for (let i = 1; i < comments.length; i++) {
+    const previous = comments[i - 1]!;
+    const current = comments[i]!;
+    const between = source.slice(previous.range().end.index, current.range().start.index);
+    text += between.includes("\n") ? "" : between;
+    text += current.text();
+  }
+
+  return text;
+}
+
+function commentsPrefixText(comments: SgNode<TSX>[], nextStart: number, source: string): string {
+  if (comments.length === 0) {
+    return "";
+  }
+
+  const last = comments[comments.length - 1]!;
+  return `${joinCommentTexts(comments, source)}${source.slice(last.range().end.index, nextStart)}`;
+}
+
+function trailingInlineCommentTexts(comments: SgNode<TSX>[], anchorEnd: number, source: string): string[] {
+  if (comments.length === 0) {
+    return [];
+  }
+
+  const texts: string[] = [];
+  let cursor = anchorEnd;
+  for (const comment of comments) {
+    texts.push(`${source.slice(cursor, comment.range().start.index)}${comment.text()}`);
+    cursor = comment.range().end.index;
+  }
+  return texts;
+}
+
+function tokenSourceWithComments(node: SgNode<TSX>, rendered: string, source: string): string {
+  const split = splitDirectComments(node);
+  const beforeStart = split.before.length > 0
+    ? Math.min(...split.before.map((comment) => comment.range().start.index))
+    : node.range().start.index;
+  const beforeText = source.slice(beforeStart, node.range().start.index);
+  const afterEnd = split.after.length > 0
+    ? Math.max(...split.after.map((comment) => comment.range().end.index))
+    : node.range().end.index;
+  const afterText = source.slice(node.range().end.index, afterEnd);
+  return `${beforeText}${rendered}${afterText}`;
+}
+
+function commentBlocks(comments: SgNode<TSX>[], source: string): string[] {
+  if (comments.length === 0) {
+    return [];
+  }
+
+  const blocks = [comments[0]!.text()];
+  for (let i = 1; i < comments.length; i++) {
+    const previous = comments[i - 1]!;
+    const current = comments[i]!;
+    const between = source.slice(previous.range().end.index, current.range().start.index);
+    if (between.includes("\n")) {
+      blocks.push(current.text());
+    } else {
+      blocks[blocks.length - 1] += between + current.text();
+    }
+  }
+
+  return blocks;
+}
+
+function isLineComment(text: string): boolean {
+  return text.startsWith("//");
+}
+
+function argumentLayout(call: SgNode<TSX>): ArgumentLayout {
+  const argsNode = call.field("arguments");
+  if (!argsNode) {
+    return { args: [], boundaryComments: [[]] };
+  }
+
+  const rawChildren = argsNode.children();
+  const args: SgNode<TSX>[] = [];
+  const boundaryComments: SgNode<TSX>[][] = [[]];
+  let seenArgs = 0;
+
+  for (const child of rawChildren) {
+    if (child.kind() === "comment") {
+      boundaryComments[seenArgs]!.push(child);
+      continue;
+    }
+
+    if (child.isNamed()) {
+      args.push(child);
+      seenArgs++;
+      if (!boundaryComments[seenArgs]) {
+        boundaryComments[seenArgs] = [];
+      }
+    }
+  }
+
+  return { args, boundaryComments };
+}
+
+function detachedLeadingComments(call: SgNode<TSX>): SgNode<TSX>[] {
+  const parent = call.parent();
+  if (!parent || parent.kind() === "arguments" || parent.kind() === "call_expression") {
+    return [];
+  }
+
+  return parent.children()
+    .filter((child) => child.kind() === "comment" && child.range().end.index <= call.range().start.index)
+    .sort((left, right) => left.range().start.index - right.range().start.index);
+}
+
+function splitBoundaryCommentsByComma(
+  anchorNode: SgNode<TSX>,
+  comments: SgNode<TSX>[],
+  source: string,
+): { beforeComma: SgNode<TSX>[]; afterComma: SgNode<TSX>[] } {
+  const beforeComma: SgNode<TSX>[] = [];
+  const afterComma: SgNode<TSX>[] = [];
+  for (const comment of comments) {
+    const between = source.slice(anchorNode.range().end.index, comment.range().start.index);
+    if (between.includes(",")) {
+      afterComma.push(comment);
+    } else {
+      beforeComma.push(comment);
+    }
+  }
+  return { beforeComma, afterComma };
+}
+
+function tagDescriptor(node: SgNode<TSX>): TagDescriptor | null {
+  if (node.kind() === "identifier" || node.kind() === "property_identifier") {
+    return { text: node.text(), trailingComments: directCommentTexts(node) };
+  }
+
+  if (node.kind() === "string") {
+    return { text: stringValue(node), trailingComments: directCommentTexts(node) };
+  }
+
+  if (node.kind() !== "member_expression") {
+    return null;
+  }
+
+  const object = node.field("object");
+  const property = node.field("property");
+  if (!object || !property) {
+    return null;
+  }
+
+  const objectTag = tagDescriptor(object);
+  const propertyTag = tagDescriptor(property);
+  if (!objectTag || !propertyTag) {
+    return null;
+  }
+
+  const subtreeComments = node.findAll({ rule: { kind: "comment" } })
+    .sort((left, right) => left.range().start.index - right.range().start.index)
+    .map((comment) => comment.text());
+  const trailingComments = [
+    ...directCommentTexts(node),
+    ...objectTag.trailingComments,
+    ...propertyTag.trailingComments,
+  ];
+
+  return {
+    text: `${objectTag.text}.${propertyTag.text}`,
+    trailingComments,
+  };
+}
+
+function renderTokenWithComments(node: SgNode<TSX>, text: string, source: string): string {
+  return tokenSourceWithComments(node, text, source);
+}
+
+function renderPropValue(node: SgNode<TSX>, source: string): string {
+  if (node.kind() === "string") {
+    const literal = stringValue(node);
+    if (canLiteralBePropString(node, literal)) {
+      return renderTokenWithComments(node, `"${literal}"`, source);
+    }
+  }
+
+  const split = splitDirectComments(node);
+  return `{${joinCommentTexts(split.before, source)}${node.text()}${joinCommentTexts(split.after, source)}}`;
+}
+
+function spreadAttrDescriptor(node: SgNode<TSX>, source: string): AttrDescriptor {
+  const argument = spreadArgument(node);
+  if (!argument) {
+    throw new Error("Expected spread element argument");
+  }
+
+  return {
+    leadingBlocks: commentBlocks(directCommentNodes(node), source),
+    inline: `{...${tokenSourceWithComments(argument, argument.text(), source)}}`,
+    hasComments: directCommentNodes(node).length > 0 || directCommentNodes(argument).length > 0,
+  };
+}
+
+function pairInlineDescriptor(
+  node: SgNode<TSX>,
+  source: string,
+  prefixInlineComments: string[],
+  suffixInlineComments: string[],
+  leadingBlocks: string[],
+): AttrDescriptor {
+  const key = node.field("key");
+  const value = node.field("value");
+  if (!key || !value) {
+    throw new Error("Expected object property to have key and value");
+  }
+
+  const pairComments = directCommentNodes(node);
+  const keyAfter = pairComments[0] ? [pairComments[0]!] : [];
+  const valueBefore = pairComments.slice(1);
+  const keyText = `${prefixInlineComments.join("")}${attrName(key)}${joinCommentTexts(keyAfter, source)}`;
+  const valueText = (() => {
+    if (value.kind() === "string") {
+      const literal = stringValue(value);
+      if (canLiteralBePropString(value, literal)) {
+        return `${commentsPrefixText(valueBefore, value.range().start.index, source)}"${literal}"${suffixInlineComments.join("")}`;
+      }
+    }
+    return `{${commentsPrefixText(valueBefore, value.range().start.index, source)}${value.text()}}${suffixInlineComments.join("")}`;
+  })();
+
+  return {
+    leadingBlocks,
+    inline: `${keyText}=${valueText}`,
+    hasComments:
+      leadingBlocks.length > 0 ||
+      prefixInlineComments.length > 0 ||
+      suffixInlineComments.length > 0 ||
+      pairComments.length > 0,
+  };
+}
+
+function propsToDescriptors(node: SgNode<TSX> | null, source: string): {
+  attrs: AttrDescriptor[];
+  trailingElementComments: string[];
+  consumedBoundaryComments: string[];
+} {
+  if (!node || node.kind() === "null") {
+    return { attrs: [], trailingElementComments: [], consumedBoundaryComments: [] };
+  }
+
+  if (isMemberCall(node, "React", "__spread") || isMemberCall(node, "Object", "assign")) {
+    const callee = node.field("function");
+    const calleeObject = callee?.field("object") ?? null;
+    const calleeProperty = callee?.field("property") ?? null;
+    const attrs: AttrDescriptor[] = [];
+    const trailing = [
+      ...directCommentTexts(node),
+      ...directCommentTexts(callee),
+      ...directCommentTexts(calleeObject),
+      ...directCommentTexts(calleeProperty),
+    ];
+
+    for (const arg of callArguments(node)) {
+      const nested = propsToDescriptors(arg, source);
+      attrs.push(...nested.attrs);
+      trailing.push(...nested.trailingElementComments);
+    }
+
+    return { attrs, trailingElementComments: trailing, consumedBoundaryComments: [] };
+  }
+
+  if (
+    node.kind() === "identifier" ||
+    node.kind() === "member_expression" ||
+    node.kind() === "call_expression"
+  ) {
+    return {
+      attrs: [{
+        leadingBlocks: [],
+        inline: `{...${tokenSourceWithComments(node, node.text(), source)}}`,
+        hasComments: directCommentNodes(node).length > 0,
+      }],
+      trailingElementComments: [],
+      consumedBoundaryComments: [],
+    };
+  }
+
+  if (node.kind() !== "object") {
+    throw new Error(`Unexpected attribute of type "${legacyType(node)}"`);
+  }
+
+  const attrs: AttrDescriptor[] = [];
+  const objectComments = directCommentNodes(node);
+  const namedChildrenList = node.children().filter((child) => child.isNamed() && child.kind() !== "comment");
+  const pendingLeadingBlocks = new Map<number, string[]>();
+  const consumedObjectComments = new Set<number>();
+
+  if (namedChildrenList.length === 0) {
+    return {
+      attrs,
+      trailingElementComments: objectComments.map((comment) => comment.text()),
+      consumedBoundaryComments: [],
+    };
+  }
+
+  for (let index = 0; index < namedChildrenList.length; index++) {
+    const child = namedChildrenList[index]!;
+    const nextChild = namedChildrenList[index + 1];
+
+    if (child.kind() === "spread_element") {
+      attrs.push(spreadAttrDescriptor(child, source));
+      continue;
+    }
+
+    if (child.kind() !== "pair") {
+      continue;
+    }
+
+    const key = child.field("key");
+    const value = child.field("value");
+    if (!key || !value) {
+      continue;
+    }
+
+    const commentsBefore = objectComments.filter((comment) =>
+      !consumedObjectComments.has(comment.id()) &&
+      comment.range().end.index <= key.range().start.index &&
+      comment.range().start.index >= node.range().start.index
+    );
+    const commentsAfterValue = objectComments.filter((comment) =>
+      !consumedObjectComments.has(comment.id()) &&
+      comment.range().start.index >= value.range().end.index &&
+      comment.range().end.index <= (nextChild?.range().start.index ?? node.range().end.index)
+    );
+
+    const beforeComma: SgNode<TSX>[] = [];
+    const afterComma: SgNode<TSX>[] = [];
+    for (const comment of commentsAfterValue) {
+      const between = source.slice(value.range().end.index, comment.range().start.index);
+      if (between.includes(",")) {
+        afterComma.push(comment);
+      } else {
+        beforeComma.push(comment);
+      }
+    }
+
+    const trailingBlocksForCurrent = !nextChild
+      ? (commentsBefore.length > 0 && afterComma.length > 0
+        ? [`${commentBlocks(commentsBefore, source).join("")}${afterComma.map((comment) => comment.text()).join("")}`]
+        : commentBlocks(afterComma, source))
+      : [];
+    const currentLeadingBlocks = [
+      ...(pendingLeadingBlocks.get(index) ?? []),
+      ...((!nextChild && afterComma.length > 0)
+        ? []
+        : (index === 0 ? [] : commentBlocks(commentsBefore, source))),
+      ...trailingBlocksForCurrent,
+    ];
+    const inlinePrefix = index === 0 ? commentsBefore.map((comment) => comment.text()) : [];
+    const inlineSuffix = beforeComma.map((comment) => comment.text());
+
+    attrs.push(pairInlineDescriptor(child, source, inlinePrefix, inlineSuffix, currentLeadingBlocks));
+    [...commentsBefore, ...beforeComma, ...afterComma].forEach((comment) => consumedObjectComments.add(comment.id()));
+
+    const carryBlocks = nextChild ? commentBlocks(afterComma, source) : [];
+    if (carryBlocks.length > 0) {
+      const targetIndex = nextChild ? index + 1 : index;
+      pendingLeadingBlocks.set(targetIndex, [
+        ...(pendingLeadingBlocks.get(targetIndex) ?? []),
+        ...carryBlocks,
+      ]);
+    }
+  }
+
+  return {
+    attrs,
+    trailingElementComments: [],
+    consumedBoundaryComments: [],
+  };
 }
 
 function jsxReference(node: SgNode<TSX>): string | null {
@@ -346,7 +807,7 @@ function renderExpression(code: string, baseIndent: string): string {
   return `{\n${indentAll(code, `${baseIndent}  `)}\n${baseIndent}}`;
 }
 
-function renderChild(node: SgNode<TSX>, baseIndent: string): { code: string; count: number } {
+function renderSimpleChild(node: SgNode<TSX>, baseIndent: string): { code: string; count: number } {
   if (node.kind() === "string") {
     const value = stringValue(node);
     if (value !== "" && value.trim() === value) {
@@ -366,7 +827,7 @@ function renderChild(node: SgNode<TSX>, baseIndent: string): { code: string; cou
   }
 
   if (isReactCreateElementCall(node)) {
-    const nested = convertCall(node, baseIndent);
+    const nested = convertSimpleCall(node, baseIndent);
     if (!nested) {
       return { code: renderExpression(node.text(), baseIndent), count: 0 };
     }
@@ -380,13 +841,7 @@ function renderChild(node: SgNode<TSX>, baseIndent: string): { code: string; cou
   return { code: renderExpression(node.text(), baseIndent), count: 0 };
 }
 
-function wrapWithComments(jsx: string, comments: string[], baseIndent: string): string {
-  const innerIndent = `${baseIndent}  `;
-  const commentBlock = comments.map((comment) => `${innerIndent}${comment}`).join("\n");
-  return `(\n${commentBlock}\n${indentAll(jsx, innerIndent)}\n${baseIndent})`;
-}
-
-function convertCall(call: SgNode<TSX>, baseIndent: string): Conversion | null {
+function convertSimpleCall(call: SgNode<TSX>, baseIndent: string): Conversion | null {
   const args = callArguments(call);
   const elementArg = args[0];
   if (!elementArg) {
@@ -401,7 +856,7 @@ function convertCall(call: SgNode<TSX>, baseIndent: string): Conversion | null {
   const propsArg = args[1] ?? null;
   const attributes = propsToAttributes(propsArg);
   const childIndent = `${baseIndent}  `;
-  const childResults = args.slice(2).map((child) => renderChild(child, childIndent));
+  const childResults = args.slice(2).map((child) => renderSimpleChild(child, childIndent));
   const attributeSuffix = attributes.length > 0 ? ` ${attributes.join(" ")}` : "";
 
   let jsx = `<${tag}${attributeSuffix}`;
@@ -417,15 +872,339 @@ function convertCall(call: SgNode<TSX>, baseIndent: string): Conversion | null {
     jsx += `>\n${childLines.join("\n")}\n${baseIndent}</${tag}>`;
   }
 
-  const comments = ownCommentTexts(call);
-  if (comments.length === 0) {
-    return { code: jsx, count, hasComments: false };
+  return { code: jsx, count, hasComments: false };
+}
+
+function renderAttributeDescriptor(attr: AttrDescriptor, indent: string): string {
+  const mergedBlocks = [...attr.leadingBlocks];
+  if (mergedBlocks.length >= 2 && mergedBlocks[mergedBlocks.length - 1]!.startsWith("//")) {
+    mergedBlocks[mergedBlocks.length - 2] = `${mergedBlocks[mergedBlocks.length - 2]!}${mergedBlocks[mergedBlocks.length - 1]!}`;
+    mergedBlocks.pop();
+  }
+  const lines = mergedBlocks.map((block) => `${indent}${block}`);
+  lines.push(`${indent}${attr.inline}`);
+  return lines.join("\n");
+}
+
+function renderExpressionContainer(
+  core: string,
+  leadingComments: string[],
+  trailingComments: string[],
+  _indent: string,
+): string {
+  const leadingText = leadingComments.join("");
+  const trailingText = trailingComments.join("");
+
+  if (leadingText.length === 0 && trailingText.length === 0 && !core.includes("\n")) {
+    return `{${core}}`;
+  }
+
+  if (leadingText.length > 0) {
+    if (core.includes("\n")) {
+      return `{\n${core}${trailingText}\n}`;
+    }
+    if (!leadingComments.some(isLineComment)) {
+      return `{${leadingText}${core}${trailingText}}`;
+    }
+    return `{${leadingText}\n${core}${trailingText}}`;
+  }
+
+  if (trailingText.length > 0 && !core.includes("\n")) {
+    return `{${core}${trailingText}}`;
+  }
+
+  return `{\n${core}\n}`;
+}
+
+function renderElementCore(
+  tag: string,
+  attrs: AttrDescriptor[],
+  children: { code: string; count: number }[],
+  baseIndent: string,
+): string {
+  const attrIndent = `${baseIndent}  `;
+  const hasCommentedAttrs = attrs.some((attr) => attr.leadingBlocks.length > 0);
+
+  if (children.length === 0) {
+    if (attrs.length === 0) {
+      return `<${tag} />`;
+    }
+
+    if (hasCommentedAttrs) {
+      return `<${tag}\n${attrs.map((attr) => renderAttributeDescriptor(attr, attrIndent)).join("\n")}\n${baseIndent}/>`;
+    }
+
+    return `<${tag} ${attrs.map((attr) => attr.inline).join(" ")} />`;
+  }
+
+  let opening = `<${tag}>`;
+  if (attrs.length > 0) {
+    if (hasCommentedAttrs) {
+      const attrLines = attrs.map((attr) => renderAttributeDescriptor(attr, attrIndent));
+      attrLines[attrLines.length - 1] = `${attrLines[attrLines.length - 1]!}>`;
+      opening = `<${tag}\n${attrLines.join("\n")}`;
+    } else {
+      opening = `<${tag} ${attrs.map((attr) => attr.inline).join(" ")}>`;
+    }
+  }
+
+  const childIndent = `${baseIndent}  `;
+  const renderedChildren = children.map((child) => indentAll(child.code, childIndent));
+  return `${opening}\n${renderedChildren.join("\n")}\n${baseIndent}</${tag}>`;
+}
+
+function finalizeRenderedElement(rendered: RenderedElement, baseIndent: string): string {
+  if (!rendered.hasComments) {
+    return rendered.core;
+  }
+
+  if (!rendered.core.includes("\n") && rendered.leadingComments.length === 0 && rendered.trailingComments.length > 0) {
+    return `${rendered.core}${rendered.trailingComments.join("")}`;
+  }
+
+  if (rendered.leadingComments.length === 0 && rendered.trailingComments.length > 0) {
+    return `${rendered.core}${rendered.trailingComments.join("")}`;
+  }
+
+  const innerIndent = `${baseIndent}  `;
+  const lines: string[] = [];
+  if (rendered.leadingComments.length > 0) {
+    if (rendered.leadingComments.some(isLineComment)) {
+      lines.push(...rendered.leadingComments.map((comment) => `${innerIndent}${comment}`));
+      lines.push(indentAll(rendered.core, innerIndent));
+    } else {
+      const indentedCore = indentAll(rendered.core, innerIndent);
+      const coreLines = indentedCore.split("\n");
+      coreLines[0] = `${innerIndent}${rendered.leadingComments.join("")}${coreLines[0]!.slice(innerIndent.length)}`;
+      lines.push(coreLines.join("\n"));
+    }
+  } else {
+    lines.push(indentAll(rendered.core, innerIndent));
+  }
+
+  if (rendered.trailingComments.length > 0) {
+    lines.push(`${innerIndent}${rendered.trailingComments.join("")}`);
+  }
+
+  return `(\n${lines.join("\n")}\n${baseIndent})`;
+}
+
+function commentedChild(
+  node: SgNode<TSX>,
+  leadingBoundaryComments: SgNode<TSX>[],
+  trailingBoundaryComments: SgNode<TSX>[],
+  baseIndent: string,
+  source: string,
+): { code: string; count: number } {
+  let boundaryLeading = [
+    ...leadingBoundaryComments.map((comment) => comment.text()),
+    ...trailingBoundaryComments.map((comment) => comment.text()),
+  ];
+  let trailingInlineComments: string[] = [];
+  if (isReactCreateElementCall(node) && trailingBoundaryComments.length > 0) {
+    const split = splitBoundaryCommentsByComma(node, trailingBoundaryComments, source);
+    boundaryLeading = [
+      ...leadingBoundaryComments.map((comment) => comment.text()),
+      ...split.beforeComma.filter((comment) => isLineComment(comment.text())).map((comment) => comment.text()),
+      ...split.afterComma.map((comment) => comment.text()),
+    ];
+    trailingInlineComments = split.beforeComma
+      .filter((comment) => !isLineComment(comment.text()))
+      .map((comment) => comment.text());
+  }
+  const directLeading = isReactCreateElementCall(node) ? [] : directCommentTexts(node);
+  const leadingComments = [...boundaryLeading, ...directLeading];
+
+  if (node.kind() === "string") {
+    const value = stringValue(node);
+    if (leadingComments.length === 0 && value !== "" && value.trim() === value) {
+      return { code: encodeJSXTextValue(value), count: 0 };
+    }
+
+    return {
+      code: renderExpressionContainer(node.text(), leadingComments, [], baseIndent),
+      count: 0,
+    };
+  }
+
+  if (node.kind() === "spread_element") {
+    const argument = spreadArgument(node);
+    if (!argument) {
+      throw new Error("Expected spread child argument");
+    }
+
+    return {
+      code: renderExpressionContainer(argument.text(), leadingComments, [], baseIndent),
+      count: 0,
+    };
+  }
+
+  if (isReactCreateElementCall(node)) {
+    const nested = convertCommentedCall(node, baseIndent, source);
+    if (!nested) {
+      return {
+        code: renderExpressionContainer(node.text(), leadingComments, [], baseIndent),
+        count: 0,
+      };
+    }
+
+    if (!nested.hasComments && leadingComments.length === 0) {
+      return { code: nested.core, count: nested.count };
+    }
+
+    return {
+      code: renderExpressionContainer(
+        nested.core,
+        [...leadingComments, ...nested.leadingComments],
+        [
+          ...trailingInlineCommentTexts(
+            trailingBoundaryComments.filter((comment) => !isLineComment(comment.text())),
+            node.range().end.index,
+            source,
+          ),
+          ...(nested.wrappedChildTrailingComments ?? nested.trailingComments),
+        ],
+        baseIndent,
+      ),
+      count: nested.count,
+    };
   }
 
   return {
-    code: wrapWithComments(jsx, comments, baseIndent),
+    code: renderExpressionContainer(node.text(), leadingComments, [], baseIndent),
+    count: 0,
+  };
+}
+
+function convertCommentedCall(call: SgNode<TSX>, baseIndent: string, source: string): RenderedElement | null {
+  const layout = argumentLayout(call);
+  const args = layout.args;
+  const elementArg = args[0];
+  if (!elementArg) {
+    return null;
+  }
+
+  const tag = topLevelJsxTag(elementArg);
+  if (!tag) {
+    return null;
+  }
+
+  const tagInfo = tagDescriptor(elementArg);
+  if (!tagInfo) {
+    return null;
+  }
+
+  const callLeadingComments = [
+    ...detachedLeadingComments(call).map((comment) => comment.text()),
+    ...directCommentTexts(call),
+  ];
+  const callee = call.field("function");
+  const calleeLeadingComments = [
+    ...directCommentTexts(callee),
+    ...directCommentTexts(callee?.field("object") ?? null),
+    ...directCommentTexts(callee?.field("property") ?? null),
+  ];
+
+  const beforeFirst = layout.boundaryComments[0] ?? [];
+  const betweenTagAndProps = layout.boundaryComments[1] ?? [];
+  const propsArg = args[1] ?? null;
+  const propsIsSpreadLike = propsArg !== null &&
+    (propsArg.kind() === "identifier" || propsArg.kind() === "member_expression" || propsArg.kind() === "call_expression");
+  const propsIsNull = propsArg?.kind() === "null";
+  const leadingComments = [
+    ...callLeadingComments,
+    ...calleeLeadingComments,
+    ...beforeFirst.filter((comment) => isLineComment(comment.text())).map((comment) => comment.text()),
+    ...betweenTagAndProps.filter((comment) => isLineComment(comment.text())).map((comment) => comment.text()),
+  ];
+  const baseTagPropsTrailing = (propsIsSpreadLike || propsIsNull)
+    ? []
+    : betweenTagAndProps.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text());
+  const memberNoPropsBoundaryComments = !propsArg && elementArg.kind() === "member_expression"
+    ? [
+        ...beforeFirst.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text()),
+        ...baseTagPropsTrailing,
+      ]
+    : [];
+  const trailingComments = !propsArg && elementArg.kind() === "member_expression"
+    ? [
+        ...beforeFirst.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text()),
+        ...baseTagPropsTrailing,
+        ...tagInfo.trailingComments,
+      ]
+    : [
+        ...tagInfo.trailingComments,
+        ...beforeFirst.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text()),
+        ...baseTagPropsTrailing,
+      ];
+
+  const propsBoundaryAfter = propsArg && args.length === 2
+    ? (layout.boundaryComments[2] ?? [])
+    : [];
+  const props = propsToDescriptors(propsArg, source);
+  if (propsArg && (propsArg.kind() === "identifier" || propsArg.kind() === "member_expression" || propsArg.kind() === "call_expression")) {
+    const spreadAttr = props.attrs[0];
+    if (spreadAttr) {
+      const beforeText = betweenTagAndProps.map((comment) => comment.text()).join("");
+      const afterText = propsBoundaryAfter.map((comment) => comment.text()).join("");
+      spreadAttr.inline = `{...${beforeText}${propsArg.text()}${afterText}}`;
+      spreadAttr.hasComments ||= beforeText.length > 0 || afterText.length > 0;
+    }
+  }
+  if (propsIsNull) {
+    const nullPropComments = [
+      ...betweenTagAndProps.map((comment) => comment.text()),
+      ...propsBoundaryAfter.map((comment) => comment.text()),
+    ];
+    if (nullPropComments.length > 0) {
+      trailingComments.push(` ${nullPropComments[0]!}`, ...nullPropComments.slice(1));
+    }
+  }
+  trailingComments.push(...props.trailingElementComments);
+
+  const childIndent = `${baseIndent}  `;
+  const children = args.slice(2).map((child, index) => {
+    const argIndex = index + 2;
+    let boundaryBefore = argIndex === 2 ? (layout.boundaryComments[argIndex] ?? []) : [];
+    if (argIndex === 2 && propsArg) {
+      const split = splitBoundaryCommentsByComma(propsArg, boundaryBefore, source);
+      if (propsIsSpreadLike) {
+        boundaryBefore = [...split.beforeComma, ...split.afterComma];
+      } else {
+        trailingComments.push(...split.beforeComma.map((comment) => comment.text()));
+        boundaryBefore = split.afterComma;
+      }
+    }
+    const boundaryAfter = layout.boundaryComments[argIndex + 1] ?? [];
+    return commentedChild(child, boundaryBefore, boundaryAfter, childIndent, source);
+  });
+
+  const core = renderElementCore(tagInfo.text, props.attrs, children, "");
+  let count = 1;
+  for (const child of children) {
+    count += child.count;
+  }
+
+  return {
+    core,
     count,
-    hasComments: true,
+    leadingComments,
+    trailingComments,
+    hasComments:
+      leadingComments.length > 0 ||
+      trailingComments.length > 0 ||
+      props.attrs.some((attr) => attr.leadingBlocks.length > 0) ||
+      children.some((child) => child.code.includes("\n")),
+    wrappedChildTrailingComments:
+      !propsArg && elementArg.kind() === "member_expression" && memberNoPropsBoundaryComments.length > 0
+        ? [
+            ...memberNoPropsBoundaryComments,
+            ...tagInfo.trailingComments,
+            ...memberNoPropsBoundaryComments,
+            ...tagInfo.trailingComments,
+            ...tagInfo.trailingComments,
+          ]
+        : undefined,
   };
 }
 
@@ -470,12 +1249,27 @@ const transform: Transform<TSX> = async (root, options) => {
     }
 
     const baseIndent = lineIndent(source, call.range().start.index);
-    const conversion = convertCall(call, baseIndent);
+    const conversion = ownCommentNodes(call).length > 0
+      ? convertCommentedCall(call, baseIndent, source)
+      : convertSimpleCall(call, baseIndent);
     if (!conversion) {
       continue;
     }
 
-    edits.push(call.replace(conversion.code));
+    const code = "core" in conversion ? finalizeRenderedElement(conversion, baseIndent) : conversion.code;
+    if ("core" in conversion) {
+      const detachedComments = detachedLeadingComments(call);
+      const replacementStart = detachedComments.length > 0
+        ? Math.min(...detachedComments.map((comment) => comment.range().start.index))
+        : call.range().start.index;
+      edits.push({
+        startPos: replacementStart,
+        endPos: call.range().end.index,
+        insertedText: code,
+      });
+    } else {
+      edits.push(call.replace(code));
+    }
     totalConversions += conversion.count;
   }
 

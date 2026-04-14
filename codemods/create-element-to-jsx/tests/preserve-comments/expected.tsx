@@ -1,77 +1,41 @@
 var React = require('react');
 
 const render = () => {
-  return /*1*/(
-    /*2*/
-    /*3*/
-    /*4*/
-    /*5*/
-    /*6*/
-    /*7*/
-    /*8*/
-    /*9*/
-    /*10*/
-    /*11*/
-    /*12*/
-    /*13*/
-    /*14*/
-    /*15*/
-    /*16*/
-    //17
-    /*18*/
-    /*19*/
-    /*24*/
-    //25
-    <div className="foo" onClick={this.handleClick}>
-        {
-          (
-                /*20*/
-                /*21*/
-                /*22*/
-                /*23*/
-                <TodoList.Item />
-              )
-        }
-        {
-          (
-                /*26*/
-                /*27*/
-                <span {...getProps()} />
-              )
-        }
-        {
-          (
-                /*28*/
-                /*29*/
-                <input />
-              )
-        }
-      </div>
+  return (
+    /*1*//*4*//*2*//*3*/<div
+      /*8*/className/*9*/=/*10*/"foo"/*11*/
+      /*12*/
+      /*13*///17
+      onClick/*14*/={/*15*/ this.handleClick}/*16*/>
+      {/*19*///25
+      <TodoList.Item />/*24*//*20*//*23*//*21*//*22*//*20*//*23*//*21*//*22*//*21*//*22*/}
+      <span {.../*26*/getProps()/*27*/} />
+      {<input /> /*28*//*29*/}
+    </div>
+    /*5*//*6*//*7*//*18*/
   );
 };
 
 const render2 = () => {
   return (
-    // Prop comment.
-    // Child string comment.
-    <div className="foo">
-        hello
-      </div>
+    <div
+      // Prop comment.
+      className="foo">
+      {// Child string comment.
+      'hello'}
+    </div>
   );
 };
 
 const render3 = () => {
   return (
-    // Child element comment.
     <div>
-        <span />
-      </div>
+      {// Child element comment.
+      <span />}
+    </div>
   );
 };
 
 const render4 = () => {
-  return (
-    /* No props to see here! */
-    <Foo />
-  );
+  return <Foo />/* No props to see here! */;
 };
