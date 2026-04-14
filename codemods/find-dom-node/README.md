@@ -8,6 +8,10 @@ Replace `.getDOMNode()` calls with `React.findDOMNode(...)`.
 codemod run @react/find-dom-node
 ```
 
+## Options
+
+- `explicit-require`: when `false`, run even if no React import/require is present. Default: `true`.
+
 ## Development
 
 ```bash

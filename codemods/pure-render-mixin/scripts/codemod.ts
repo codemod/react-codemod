@@ -2,9 +2,74 @@ import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
 
+const REACT_MODULES = new Set(["React", "react", "react/addons", "react-native"]);
+
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
   return filename.startsWith(cwd) ? filename.slice(cwd.length) : filename;
+}
+
+function stringValue(node: SgNode<TSX>): string | null {
+  const fragment = node.find({ rule: { kind: "string_fragment" } });
+  if (fragment) return fragment.text();
+  const text = node.text();
+  return text.length >= 2 ? text.slice(1, -1) : null;
+}
+
+function callArguments(call: SgNode<TSX>): SgNode<TSX>[] {
+  const args = call.field("arguments");
+  if (!args) return [];
+  return args.children().filter((child) => child.isNamed() && child.kind() !== "comment");
+}
+
+function requireSource(call: SgNode<TSX>): string | null {
+  const callee = call.field("function");
+  if (!callee || callee.kind() !== "identifier" || callee.text() !== "require") return null;
+  const firstArg = callArguments(call)[0];
+  return firstArg?.kind() === "string" ? stringValue(firstArg) : null;
+}
+
+function importSource(node: SgNode<TSX>): string | null {
+  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
+  return source ? stringValue(source) : null;
+}
+
+function hasReact(rootNode: SgNode<TSX, "program">): boolean {
+  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (REACT_MODULES.has(importSource(importNode) ?? "")) return true;
+  }
+
+  for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
+    if (REACT_MODULES.has(requireSource(call) ?? "")) return true;
+  }
+
+  return false;
+}
+
+function explicitRequireDisabled(value: unknown): boolean {
+  return value === false || value === "false";
+}
+
+function isReactCreateClassCall(node: SgNode<TSX> | null): node is SgNode<TSX> {
+  if (!node || node.kind() !== "call_expression") return false;
+  const callee = node.field("function");
+  return callee?.kind() === "member_expression" &&
+    callee.field("object")?.kind() === "identifier" &&
+    callee.field("object")?.text() === "React" &&
+    callee.field("property")?.kind() === "property_identifier" &&
+    callee.field("property")?.text() === "createClass";
+}
+
+function reactCreateClassDeclarators(rootNode: SgNode<TSX, "program">): Array<{
+  declarator: SgNode<TSX>;
+  call: SgNode<TSX>;
+}> {
+  const result: Array<{ declarator: SgNode<TSX>; call: SgNode<TSX> }> = [];
+  for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
+    const value = declarator.field("value");
+    if (isReactCreateClassCall(value)) result.push({ declarator, call: value });
+  }
+  return result;
 }
 
 
@@ -45,6 +110,10 @@ function getPairKeyName(node: SgNode<TSX>): string {
 
 const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
+  if (!explicitRequireDisabled(options.params?.["explicit-require"]) && !hasReact(rootNode)) {
+    return null;
+  }
+
   const source = rootNode.text();
   const edits: Edit[] = [];
 
@@ -52,26 +121,7 @@ const transform: Transform<TSX> = async (root, options) => {
   const metric = useMetricAtom("pure-render-mixin-replacements");
   let transformCount = 0;
 
-  const createClassCalls = rootNode.findAll({
-    rule: {
-      kind: "call_expression",
-      has: {
-        field: "function",
-        any: [
-          {
-            kind: "member_expression",
-            all: [
-              { has: { field: "object", kind: "identifier", regex: "^React$" } },
-              { has: { field: "property", kind: "property_identifier", regex: "^createClass$" } },
-            ],
-          },
-          { kind: "identifier", regex: "^createClass$" },
-        ],
-      },
-    },
-  });
-
-  for (const call of createClassCalls) {
+  for (const { call } of reactCreateClassDeclarators(rootNode)) {
     const configObj = getConfigObject(call);
     if (!configObj) continue;
 

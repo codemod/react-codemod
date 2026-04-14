@@ -11,6 +11,7 @@ codemod run @react/sort-comp
 ## Options
 
 - `methodsOrder`: ordered list of method groups and names used for sorting. Defaults to the built-in React sort order used by this package.
+- `explicit-require`: when `false`, run even if no React import/require is present. Default: `true`.
 
 ## Development
 

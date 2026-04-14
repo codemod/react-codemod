@@ -1,0 +1,10 @@
+{
+  "find-dom-node-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/module-exports/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

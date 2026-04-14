@@ -11,6 +11,7 @@ codemod run @react/pure-render-mixin
 ## Options
 
 - `mixin-name`: custom mixin identifier to replace. Default: `PureRenderMixin`.
+- `explicit-require`: when `false`, run even if no React import/require is present. Default: `true`.
 
 ## Development
 

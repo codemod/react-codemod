@@ -7,6 +7,145 @@ function metricFile(filename: string): string {
   return filename.startsWith(cwd) ? filename.slice(cwd.length) : filename;
 }
 
+type ReactImportAliases = {
+  component: Set<string>;
+  pureComponent: Set<string>;
+};
+
+type ReactSuperclassKind = "Component" | "PureComponent";
+
+const REACT_SOURCES = new Set(["react", "React", "react/addons", "react-native"]);
+
+function stringValue(node: SgNode<TSX>): string | null {
+  const fragment = node.find({ rule: { kind: "string_fragment" } });
+  if (fragment) return fragment.text();
+  const text = node.text();
+  return text.length >= 2 ? text.slice(1, -1) : null;
+}
+
+function callArguments(call: SgNode<TSX>): SgNode<TSX>[] {
+  const args = call.field("arguments");
+  if (!args) return [];
+  return args.children().filter((child) => child.isNamed() && child.kind() !== "comment");
+}
+
+function requireSource(call: SgNode<TSX>): string | null {
+  const callee = call.field("function");
+  if (!callee || callee.kind() !== "identifier" || callee.text() !== "require") return null;
+  const firstArg = callArguments(call)[0];
+  return firstArg?.kind() === "string" ? stringValue(firstArg) : null;
+}
+
+function importSource(node: SgNode<TSX>): string | null {
+  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
+  return source ? stringValue(source) : null;
+}
+
+function isReactSource(importStmt: SgNode<TSX>): boolean {
+  return REACT_SOURCES.has(importSource(importStmt) ?? "");
+}
+
+function hasReact(rootNode: SgNode<TSX, "program">): boolean {
+  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (isReactSource(importNode)) return true;
+  }
+
+  for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
+    if (REACT_SOURCES.has(requireSource(call) ?? "")) return true;
+  }
+
+  return false;
+}
+
+function explicitRequireDisabled(value: unknown): boolean {
+  return value === false || value === "false";
+}
+
+function reactImportAliases(rootNode: SgNode<TSX>): ReactImportAliases {
+  const component = new Set<string>();
+  const pureComponent = new Set<string>();
+
+  for (const importStmt of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (!isReactSource(importStmt)) continue;
+
+    for (const specifier of importStmt.findAll({ rule: { kind: "import_specifier" } })) {
+      const imported = specifier.field("name")?.text();
+      const alias = specifier.field("alias")?.text() ?? imported;
+      if (!imported || !alias) continue;
+      if (imported === "Component") component.add(alias);
+      if (imported === "PureComponent") pureComponent.add(alias);
+    }
+  }
+
+  return { component, pureComponent };
+}
+
+function reactSuperclassKind(
+  classDecl: SgNode<TSX>,
+  aliases: ReactImportAliases,
+): ReactSuperclassKind | null {
+  const heritage = classDecl.find({ rule: { kind: "class_heritage" } });
+  if (!heritage) return null;
+
+  const directExtends = heritage.find({
+    rule: { any: [{ kind: "member_expression" }, { kind: "identifier" }] },
+  });
+  if (!directExtends) return null;
+
+  if (directExtends.kind() === "member_expression") {
+    const object = directExtends.field("object");
+    const property = directExtends.field("property")?.text() ?? "";
+    if (object?.text() !== "React") return null;
+    if (property === "Component" || property === "PureComponent") return property;
+    return null;
+  }
+
+  const name = directExtends.text();
+  if (aliases.component.has(name)) return "Component";
+  if (aliases.pureComponent.has(name)) return "PureComponent";
+  return null;
+}
+
+function isReactCreateClassCall(node: SgNode<TSX> | null): node is SgNode<TSX> {
+  if (!node || node.kind() !== "call_expression") return false;
+  const callee = node.field("function");
+  return callee?.kind() === "member_expression" &&
+    callee.field("object")?.kind() === "identifier" &&
+    callee.field("object")?.text() === "React" &&
+    callee.field("property")?.kind() === "property_identifier" &&
+    callee.field("property")?.text() === "createClass";
+}
+
+function reactCreateClassConfigs(rootNode: SgNode<TSX, "program">): SgNode<TSX>[] {
+  const configs: SgNode<TSX>[] = [];
+  for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
+    const value = declarator.field("value");
+    if (!isReactCreateClassCall(value)) continue;
+    const args = value.field("arguments");
+    const config = args?.children().find((child) => child.kind() === "object");
+    if (config) configs.push(config);
+  }
+  return configs;
+}
+
+function reactClassBodies(rootNode: SgNode<TSX, "program">): SgNode<TSX>[] {
+  const aliases = reactImportAliases(rootNode);
+  const reactClasses = rootNode.findAll({ rule: { kind: "class_declaration" } })
+    .map((classDecl) => ({ classDecl, kind: reactSuperclassKind(classDecl, aliases) }))
+    .filter((entry): entry is { classDecl: SgNode<TSX>; kind: ReactSuperclassKind } => entry.kind !== null);
+  const targetSuperclassKind = reactClasses.some((entry) => entry.kind === "Component")
+    ? "Component"
+    : reactClasses.some((entry) => entry.kind === "PureComponent")
+      ? "PureComponent"
+      : null;
+
+  if (!targetSuperclassKind) return [];
+  return reactClasses
+    .filter((entry) => entry.kind === targetSuperclassKind)
+    .map((entry) => entry.classDecl.find({ rule: { kind: "class_body" } }))
+    .filter((body): body is SgNode<TSX> => body !== null);
+}
+
 
 type MemberChunk = {
   node: SgNode<TSX>;
@@ -51,8 +190,15 @@ const DEFAULT_METHODS_ORDER = [
   "render",
 ];
 
+function isTypeAnnotationMember(node: SgNode<TSX>): boolean {
+  return node.kind() === "public_field_definition" &&
+    node.field("value") === null &&
+    node.find({ rule: { kind: "type_annotation" } }) !== null;
+}
+
 function selectorMatches(selector: string, name: string, isStatic: boolean): boolean {
   if (selector === "static-methods") return isStatic;
+  if (selector === "type-annotations") return false;
   if (selector === name) return true;
   if (selector.startsWith("/") && selector.lastIndexOf("/") > 0) {
     const lastSlash = selector.lastIndexOf("/");
@@ -67,11 +213,15 @@ function selectorMatches(selector: string, name: string, isStatic: boolean): boo
   return false;
 }
 
+function chunkMatchesSelector(selector: string, chunk: MemberChunk): boolean {
+  if (selector === "type-annotations") return isTypeAnnotationMember(chunk.node);
+  return selectorMatches(selector, chunk.name, chunk.node.text().startsWith("static "));
+}
+
 function correctIndex(order: string[], chunk: MemberChunk): number {
   const everythingElse = order.indexOf("everything-else");
-  const isStatic = chunk.node.text().startsWith("static ");
   for (let i = 0; i < order.length; i++) {
-    if (i !== everythingElse && selectorMatches(order[i]!, chunk.name, isStatic)) return i;
+    if (i !== everythingElse && chunkMatchesSelector(order[i]!, chunk)) return i;
   }
   return everythingElse >= 0 ? everythingElse : Number.POSITIVE_INFINITY;
 }
@@ -129,26 +279,6 @@ function sortChunks(chunks: MemberChunk[], order: string[]): MemberChunk[] {
   });
 }
 
-function createClassConfig(call: SgNode<TSX>): SgNode<TSX> | null {
-  const args = call.field("arguments");
-  if (!args) return null;
-  return args.children().find((child) => child.kind() === "object") ?? null;
-}
-
-function isCreateClassCall(call: SgNode<TSX>): boolean {
-  const fn = call.field("function");
-  if (!fn) return false;
-  if (fn.kind() === "identifier") return fn.text() === "createClass";
-  return fn.kind() === "member_expression" && fn.field("property")?.text() === "createClass";
-}
-
-function isReactClass(node: SgNode<TSX>): boolean {
-  const heritage = node.find({ rule: { kind: "class_heritage" } });
-  if (!heritage) return false;
-  return heritage.findAll({ rule: { kind: "identifier" } })
-    .some((id) => id.text() === "Component" || id.text() === "PureComponent" || id.text() === "React");
-}
-
 function replacementFor(container: SgNode<TSX>, chunks: MemberChunk[], order: string[], sep: string): Edit | null {
   if (chunks.length <= 1) return null;
   const sorted = sortChunks(chunks, order);
@@ -163,6 +293,10 @@ function replacementFor(container: SgNode<TSX>, chunks: MemberChunk[], order: st
 
 const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
+  if (!explicitRequireDisabled(options.params?.["explicit-require"]) && !hasReact(rootNode)) {
+    return null;
+  }
+
   const source = rootNode.text();
   const edits: Edit[] = [];
   const metric = useMetricAtom("sort-comp-reorders");
@@ -171,10 +305,7 @@ const transform: Transform<TSX> = async (root, options) => {
     ? methodsOrderParam.filter((item): item is string => typeof item === "string")
     : DEFAULT_METHODS_ORDER;
 
-  for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
-    if (!isCreateClassCall(call)) continue;
-    const config = createClassConfig(call);
-    if (!config) continue;
+  for (const config of reactCreateClassConfigs(rootNode)) {
     const edit = replacementFor(config, collectChunks(config, source), methodsOrder, ",\n\n  ");
     if (edit) {
       edits.push(edit);
@@ -182,10 +313,7 @@ const transform: Transform<TSX> = async (root, options) => {
     }
   }
 
-  for (const classDecl of rootNode.findAll({ rule: { kind: "class_declaration" } })) {
-    if (!isReactClass(classDecl)) continue;
-    const body = classDecl.find({ rule: { kind: "class_body" } });
-    if (!body) continue;
+  for (const body of reactClassBodies(rootNode)) {
     const edit = replacementFor(body, collectChunks(body, source), methodsOrder, "\n\n  ");
     if (edit) {
       edits.push(edit);

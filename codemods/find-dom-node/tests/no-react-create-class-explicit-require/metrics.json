@@ -1,0 +1,10 @@
+{
+  "find-dom-node-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/no-react-create-class-explicit-require/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}
