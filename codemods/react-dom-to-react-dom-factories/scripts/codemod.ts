@@ -89,7 +89,12 @@ function isReactDomDestructurePattern(node: SgNode<TSX>): boolean {
   }
 
   const init = declarator.field("value");
-  return isReactIdentifier(init) || isReactRequireCall(init);
+  if (!(isReactIdentifier(init) || isReactRequireCall(init))) {
+    return false;
+  }
+
+  return node.findAll({ rule: { kind: "shorthand_property_identifier_pattern" } })
+    .some((property) => property.text() === "DOM");
 }
 
 const transform: Transform<TSX> = async (root) => {

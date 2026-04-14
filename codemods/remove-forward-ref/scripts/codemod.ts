@@ -37,6 +37,52 @@ function parameterTypeAnnotation(param: SgNode<TSX>): SgNode<TSX> | null {
   return children.length > 1 ? children[1] ?? null : null;
 }
 
+function legacyLiteralOrReferenceType(node: SgNode<TSX> | null): SgNode<TSX> | null {
+  const directNode = node && (
+    node.kind() === "type_identifier" ||
+    node.kind() === "nested_type_identifier" ||
+    node.kind() === "object_type" ||
+    node.kind() === "generic_type"
+  ) ? node : null;
+  const typeNode = directNode ?? (
+    node && (node.kind() === "type_annotation" || node.kind() === "type_arguments")
+      ? firstNamedChild(node)
+      : null
+  );
+  if (!typeNode) {
+    return null;
+  }
+
+  return (
+    typeNode.kind() === "type_identifier" ||
+    typeNode.kind() === "nested_type_identifier" ||
+    typeNode.kind() === "object_type" ||
+    typeNode.kind() === "generic_type"
+  ) ? typeNode : null;
+}
+
+function legacyReferenceType(node: SgNode<TSX> | null): SgNode<TSX> | null {
+  const directNode = node && (
+    node.kind() === "type_identifier" ||
+    node.kind() === "nested_type_identifier" ||
+    node.kind() === "generic_type"
+  ) ? node : null;
+  const typeNode = directNode ?? (
+    node && (node.kind() === "type_annotation" || node.kind() === "type_arguments")
+      ? firstNamedChild(node)
+      : null
+  );
+  if (!typeNode) {
+    return null;
+  }
+
+  return (
+    typeNode.kind() === "type_identifier" ||
+    typeNode.kind() === "nested_type_identifier" ||
+    typeNode.kind() === "generic_type"
+  ) ? typeNode : null;
+}
+
 function stripLeadingColon(text: string): string {
   return text.startsWith(":") ? text.slice(1).trim() : text.trim();
 }
@@ -47,7 +93,7 @@ function callTypeArguments(call: SgNode<TSX>): SgNode<TSX>[] {
 }
 
 function refTypeFromForwardedRef(typeAnnotation: SgNode<TSX> | null): string | null {
-  const typeNode = firstNamedChild(typeAnnotation);
+  const typeNode = legacyReferenceType(typeAnnotation);
   if (!typeNode || typeNode.kind() !== "generic_type") {
     return null;
   }
@@ -65,7 +111,8 @@ function refTypeFromForwardedRef(typeAnnotation: SgNode<TSX> | null): string | n
     return null;
   }
 
-  return firstNamedChild(genericArgs)?.text() ?? null;
+  const refType = legacyReferenceType(genericArgs);
+  return refType?.text() ?? null;
 }
 
 function refBindingEntry(refName: string): string {
@@ -99,19 +146,21 @@ function propsPatternText(propsParam: SgNode<TSX>, refName: string): string | nu
 
 function paramTypeText(propsParam: SgNode<TSX>, call: SgNode<TSX>, refParam: SgNode<TSX>): string | null {
   const typeArgs = callTypeArguments(call);
-  const callRefType = typeArgs[0]?.text() ?? null;
-  const callPropsType = typeArgs[1]?.text() ?? null;
-  if (callPropsType) {
-    return `${callPropsType} & { ref: React.RefObject<${callRefType ?? "unknown"}> }`;
+  const refTypeArg = typeArgs[0] ?? null;
+  const propTypeArg = typeArgs[1] ?? null;
+  const legacyRefTypeArg = legacyReferenceType(refTypeArg);
+  const legacyPropTypeArg = legacyLiteralOrReferenceType(propTypeArg);
+  if (legacyRefTypeArg && legacyPropTypeArg) {
+    return `${legacyPropTypeArg.text()} & { ref: React.RefObject<${legacyRefTypeArg.text()}> }`;
   }
 
-  const propsType = parameterTypeAnnotation(propsParam);
+  const propsType = legacyLiteralOrReferenceType(parameterTypeAnnotation(propsParam));
   if (!propsType) {
     return null;
   }
 
   const refType = refTypeFromForwardedRef(parameterTypeAnnotation(refParam)) ?? "unknown";
-  return `${stripLeadingColon(propsType.text())} & { ref: React.RefObject<${refType}> }`;
+  return `${propsType.text()} & { ref: React.RefObject<${refType}> }`;
 }
 
 function bodyText(fn: SgNode<TSX>): string | null {

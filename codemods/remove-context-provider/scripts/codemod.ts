@@ -14,7 +14,7 @@ function isContextProvider(node: SgNode<TSX>): boolean {
 
   const object = node.field("object");
   const property = node.field("property");
-  if (!object || !property || property.text() !== "Provider") {
+  if (!object || object.kind() !== "identifier" || !property || property.text() !== "Provider") {
     return false;
   }
 
