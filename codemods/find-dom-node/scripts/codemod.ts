@@ -81,11 +81,6 @@ function createClassContainers(rootNode: SgNode<TSX, "program">): SgNode<TSX>[] 
     }
   }
 
-  for (const exportStmt of rootNode.findAll({ rule: { kind: "export_statement" } })) {
-    const exported = exportStmt.children().find((child) => child.isNamed() && child.kind() === "call_expression");
-    if (isReactCreateClassCall(exported ?? null)) containers.push(exportStmt);
-  }
-
   return containers;
 }
 

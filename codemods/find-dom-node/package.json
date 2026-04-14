@@ -4,7 +4,7 @@
   "description": "Replace getDOMNode() with React.findDOMNode()",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts && node --test ./scripts/parity-tests.mjs",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
