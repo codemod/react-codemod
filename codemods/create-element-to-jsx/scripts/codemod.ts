@@ -10,7 +10,7 @@ type Conversion = {
 
 type TagDescriptor = {
   text: string;
-  trailingComments: string[];
+  identifierComments: string[];
 };
 
 type AttrDescriptor = {
@@ -25,7 +25,7 @@ type RenderedElement = {
   leadingComments: string[];
   trailingComments: string[];
   hasComments: boolean;
-  wrappedChildTrailingComments?: string[];
+  expressionTrailingComments?: string[];
 };
 
 type ArgumentLayout = {
@@ -380,11 +380,11 @@ function splitBoundaryCommentsByComma(
 
 function tagDescriptor(node: SgNode<TSX>): TagDescriptor | null {
   if (node.kind() === "identifier" || node.kind() === "property_identifier") {
-    return { text: node.text(), trailingComments: directCommentTexts(node) };
+    return { text: node.text(), identifierComments: directCommentTexts(node) };
   }
 
   if (node.kind() === "string") {
-    return { text: stringValue(node), trailingComments: directCommentTexts(node) };
+    return { text: stringValue(node), identifierComments: directCommentTexts(node) };
   }
 
   if (node.kind() !== "member_expression") {
@@ -403,18 +403,13 @@ function tagDescriptor(node: SgNode<TSX>): TagDescriptor | null {
     return null;
   }
 
-  const subtreeComments = node.findAll({ rule: { kind: "comment" } })
-    .sort((left, right) => left.range().start.index - right.range().start.index)
-    .map((comment) => comment.text());
-  const trailingComments = [
-    ...directCommentTexts(node),
-    ...objectTag.trailingComments,
-    ...propertyTag.trailingComments,
-  ];
-
   return {
     text: `${objectTag.text}.${propertyTag.text}`,
-    trailingComments,
+    identifierComments: [
+      ...directCommentTexts(node),
+      ...objectTag.identifierComments,
+      ...propertyTag.identifierComments,
+    ],
   };
 }
 
@@ -1062,7 +1057,7 @@ function commentedChild(
             node.range().end.index,
             source,
           ),
-          ...(nested.wrappedChildTrailingComments ?? nested.trailingComments),
+          ...(nested.expressionTrailingComments ?? nested.trailingComments),
         ],
         baseIndent,
       ),
@@ -1120,20 +1115,14 @@ function convertCommentedCall(call: SgNode<TSX>, baseIndent: string, source: str
   const baseTagPropsTrailing = (propsIsSpreadLike || propsIsNull)
     ? []
     : betweenTagAndProps.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text());
-  const memberNoPropsBoundaryComments = !propsArg && elementArg.kind() === "member_expression"
-    ? [
-        ...beforeFirst.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text()),
-        ...baseTagPropsTrailing,
-      ]
-    : [];
   const trailingComments = !propsArg && elementArg.kind() === "member_expression"
     ? [
         ...beforeFirst.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text()),
         ...baseTagPropsTrailing,
-        ...tagInfo.trailingComments,
+        ...tagInfo.identifierComments,
       ]
     : [
-        ...tagInfo.trailingComments,
+        ...tagInfo.identifierComments,
         ...beforeFirst.filter((comment) => !isLineComment(comment.text())).map((comment) => comment.text()),
         ...baseTagPropsTrailing,
       ];
@@ -1195,14 +1184,15 @@ function convertCommentedCall(call: SgNode<TSX>, baseIndent: string, source: str
       trailingComments.length > 0 ||
       props.attrs.some((attr) => attr.leadingBlocks.length > 0) ||
       children.some((child) => child.code.includes("\n")),
-    wrappedChildTrailingComments:
-      !propsArg && elementArg.kind() === "member_expression" && memberNoPropsBoundaryComments.length > 0
+    // Legacy recast printing duplicates a wrapped member-expression element's
+    // element-level trailing comments, then prints identifier-local comments once
+    // more. Keep those buckets separate and derive the wrapped form from them.
+    expressionTrailingComments:
+      !propsArg && elementArg.kind() === "member_expression"
         ? [
-            ...memberNoPropsBoundaryComments,
-            ...tagInfo.trailingComments,
-            ...memberNoPropsBoundaryComments,
-            ...tagInfo.trailingComments,
-            ...tagInfo.trailingComments,
+            ...trailingComments,
+            ...trailingComments,
+            ...tagInfo.identifierComments,
           ]
         : undefined,
   };

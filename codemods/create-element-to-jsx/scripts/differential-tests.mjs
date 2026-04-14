@@ -9,37 +9,10 @@ import { spawnSync } from "node:child_process";
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
 const workflowPath = path.join(packageDir, "workflow.yaml");
-const legacyTransformPath = "/Users/mohabsameh/Downloads/react-codemod/transforms/create-element-to-jsx.js";
+const testsDir = path.join(packageDir, "tests");
 
-function runLegacy(source) {
-  const dir = mkdtempSync(path.join(tmpdir(), "ce2jsx-legacy-"));
-  const inputPath = path.join(dir, "input.js");
-  writeFileSync(inputPath, source, "utf8");
-
-  try {
-    const result = spawnSync(
-      "npx",
-      [
-        "--yes",
-        "jscodeshift",
-        "-t",
-        legacyTransformPath,
-        inputPath,
-        "--run-in-band",
-        "--parser",
-        "flow",
-      ],
-      {
-        cwd: packageDir,
-        encoding: "utf8",
-        timeout: 20000,
-      },
-    );
-    assert.strictEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
-    return readFileSync(inputPath, "utf8").trim();
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
+function readFixture(name, file) {
+  return readFileSync(path.join(testsDir, name, file), "utf8").trim();
 }
 
 function runJssg(source) {
@@ -79,25 +52,18 @@ function runJssg(source) {
   }
 }
 
-const parityCases = {
-  "member_simple_comments": `var React = require('react');
-React.createElement(/*A*/Foo/*B*/./*C*/Bar/*D*/);
-`,
-  "spread_prop_comments": `var React = require('react');
-React.createElement('div', /*A*/getProps()/*B*/, 'x');
-`,
-  "member_child_comments_alt": `var React = require('react');
-React.createElement('div', null, React.createElement(/*A*/Foo/*B*/./*C*/Bar/*D*/) /*E*/);
-`,
-  "comment_only_props_string_child": `var React = require('react');
-React.createElement(Foo, {/*P*/}, 'x');
-`,
-};
+const parityCases = [
+  "member-simple-comments",
+  "spread-prop-comments",
+  "member-child-comments-alt",
+  "comment-only-props-string-child",
+];
 
-for (const [name, source] of Object.entries(parityCases)) {
-  test(`matches legacy output for ${name}`, () => {
-    const legacyOutput = runLegacy(source);
-    const jssgOutput = runJssg(source);
-    assert.strictEqual(jssgOutput, legacyOutput);
+for (const name of parityCases) {
+  test(`matches checked-in parity fixture for ${name}`, () => {
+    const input = readFixture(name, "input.tsx");
+    const expected = readFixture(name, "expected.tsx");
+    const jssgOutput = runJssg(input);
+    assert.strictEqual(jssgOutput, expected);
   });
 }
