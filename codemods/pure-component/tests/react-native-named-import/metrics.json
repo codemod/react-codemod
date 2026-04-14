@@ -1,0 +1,10 @@
+{
+  "pure-component-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/react-native-named-import/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

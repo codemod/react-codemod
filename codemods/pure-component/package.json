@@ -4,7 +4,7 @@
   "description": "Convert simple React classes into pure function components",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts --strictness loose",
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts && node --test ./scripts/warning-tests.mjs ./scripts/differential-tests.mjs",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
