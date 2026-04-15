@@ -1,28 +1,26 @@
-# Legacy Parity Status
+# Parity Status
 
 Last updated: 2026-04-15
 
 Status meanings:
 
-- `Certified`: replacement-grade rollout confidence. Strict/default package tests are green, public test posture is portable, and there are no known rollout-blocking logic gaps versus the legacy jscodeshift codemod. `Certified` may include intentional safe extensions on legacy-unsupported edge cases, as long as intentional legacy behavior remains unbroken.
-- `Legacy Snapshot`: preserved as upstream jscodeshift source and tests on this branch, but not promoted as part of the active JSSG replacement surface.
+- `Certified`: replacement-grade confidence. Tests are green, public test posture is portable, and there are no known logic gaps versus the original jscodeshift codemod. May include safe extensions on edge cases the original did not handle, as long as original behavior remains unbroken.
+- `Legacy`: available as a jscodeshift codemod under `codemods/legacy/`. Not yet ported to JSSG.
 
-## Active JSSG Surface
+## JSSG Codemods
 
-These are the only codemods promoted as active replacements on this branch.
-
-| Codemod | Legacy Source | Status | Notes |
+| Codemod | Original Source | Status | Notes |
 | --- | --- | --- | --- |
-| `replace-use-form-state` | `replace-use-form-state.ts` | `Certified` | Legacy fixture surface plus added multi-import regression coverage are green. Collection-wide replacement on matching `react-dom` imports fixes a real parity gap, and the broader multi-import handling is treated as an acceptable safe extension where legacy only partially migrated files. |
-| `replace-act-import` | `replace-act-import.ts` | `Certified` | Legacy fixture surface plus added multi-import regression coverage. This closes a real parity gap, and the mixed test-utils partial-removal path is an acceptable safe extension that does not break intentional legacy behavior. |
-| `replace-string-ref` | `replace-string-ref.ts` | `Certified` | Legacy fixture surface plus added namespace/default-export/multi-ref coverage are green, and the direct-superclass guard restores the intended direct-superclass behavior by avoiding the prior mixin false positive. |
-| `replace-reactdom-render` | `replace-reactdom-render.ts` | `Certified` | Legacy fixtures plus added multi-alias regression coverage are green. The extra multi-alias handling is an acceptable safe extension over legacy implementation limits; it preserves intentional legacy behavior while covering additional valid cases. |
-| `react-proptypes-to-prop-types` | `React-PropTypes-to-prop-types.js` | `Certified` | Full legacy fixture surface is green, targeted mixed-import validation is aligned, and no JSSG-specific rollout blocker was found in the audit. No additional extension beyond the legacy behavior is currently relied on for certification. |
-| `use-context-hook` | `use-context-hook.ts` | `Certified` | Legacy fixture surface plus added multi-import regression coverage are green. The multi-import handling goes beyond the legacy implementation, but it is treated as an acceptable safe extension because it preserves intentional legacy behavior while covering additional valid cases. |
+| `replace-use-form-state` | `replace-use-form-state.ts` | `Certified` | Full fixture coverage plus multi-import regression tests are green. Collection-wide replacement on matching `react-dom` imports fixes a real parity gap. |
+| `replace-act-import` | `replace-act-import.ts` | `Certified` | Full fixture coverage plus multi-import regression tests. Mixed test-utils partial-removal path is a safe extension. |
+| `replace-string-ref` | `replace-string-ref.ts` | `Certified` | Full fixture coverage plus namespace/default-export/multi-ref tests are green. Direct-superclass guard restores intended behavior. |
+| `replace-reactdom-render` | `replace-reactdom-render.ts` | `Certified` | Full fixture coverage plus multi-alias regression tests are green. |
+| `react-proptypes-to-prop-types` | `React-PropTypes-to-prop-types.js` | `Certified` | Full original fixture surface is green. No JSSG-specific rollout blocker found. |
+| `use-context-hook` | `use-context-hook.ts` | `Certified` | Full fixture coverage plus multi-import regression tests are green. |
 
-## Legacy Snapshot Surface
+## Legacy Codemods
 
-These codemods remain available only as an upstream jscodeshift snapshot under [`codemods/legacy/transforms/`](./codemods/legacy/transforms/):
+These codemods are available as jscodeshift transforms under [`codemods/legacy/transforms/`](./codemods/legacy/transforms/):
 
 - `class`
 - `create-element-to-jsx`

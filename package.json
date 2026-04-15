@@ -1,8 +1,8 @@
 {
-  "name": "react-codemod-preview",
+  "name": "react-codemod",
   "version": "0.1.0",
   "private": true,
-  "description": "Preview repo surface for React codemods with active JSSG replacements and a legacy snapshot",
+  "description": "A collection of codemods to help update React apps",
   "type": "module",
   "scripts": {
     "lint": "node ./scripts/validate-docs.mjs",

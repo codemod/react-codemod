@@ -1,25 +1,61 @@
-# React Codemods Preview
+# React Codemods
 
-This branch is a React-facing preview of how this repo should look as a replacement-style home for `react-codemod`.
+This repository contains a collection of codemods to help update React apps.
 
-It promotes 6 audited JSSG codemods as the active surface and preserves the remaining upstream jscodeshift codemods as a legacy snapshot.
+All codemods are free and open source, with the source code available in this repository.
 
-## Active JSSG Transforms
+## Usage
 
-These transforms are the active replacement surface on this branch. They are source-first JSSG codemods and are not described here as Codemod Registry entries unless they are actually published.
+Run a codemod from this directory using the [Codemod CLI](https://go.codemod.com/cli-docs):
 
-- [`use-context-hook`](./codemods/jssg/use-context-hook/) — replace `useContext` usage with `use`
-- [`replace-act-import`](./codemods/jssg/replace-act-import/) — move `act` from `react-dom/test-utils` to `react`
-- [`replace-string-ref`](./codemods/jssg/replace-string-ref/) — replace deprecated string refs with callback refs
-- [`replace-use-form-state`](./codemods/jssg/replace-use-form-state/) — rename `useFormState` to `useActionState`
-- [`replace-reactdom-render`](./codemods/jssg/replace-reactdom-render/) — replace `ReactDOM.render` with `createRoot(...).render(...)`
-- [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) — replace `React.PropTypes` with `prop-types`
+```bash
+pnpm dlx codemod@latest jssg run --language tsx --target <path> ./codemods/jssg/<transform>/scripts/codemod.ts
+```
 
-## Legacy Codemods
+- `<transform>` — name of the codemod (see available codemods below)
+- `<path>` — files or directory to transform
 
-All non-priority transforms are preserved as an upstream-style legacy jscodeshift snapshot under [`codemods/legacy/`](./codemods/legacy/).
+## Available Codemods
 
-See [LEGACY.md](./LEGACY.md) for the legacy catalog and testing notes.
+### `use-context-hook`
+
+Replaces usages of `React.useContext(...)` with `React.use(...)`.
+
+See [`use-context-hook`](./codemods/jssg/use-context-hook/) for details.
+
+### `replace-act-import`
+
+Updates `act` import path from `react-dom/test-utils` to `react`.
+
+See [`replace-act-import`](./codemods/jssg/replace-act-import/) for details.
+
+### `replace-string-ref`
+
+Replaces deprecated string refs with callback refs.
+
+See [`replace-string-ref`](./codemods/jssg/replace-string-ref/) for details.
+
+### `replace-use-form-state`
+
+Replaces usages of `useFormState()` with `useActionState()`.
+
+See [`replace-use-form-state`](./codemods/jssg/replace-use-form-state/) for details.
+
+### `replace-reactdom-render`
+
+Replaces usages of `ReactDOM.render()` with `createRoot(node).render()`.
+
+See [`replace-reactdom-render`](./codemods/jssg/replace-reactdom-render/) for details.
+
+### `react-proptypes-to-prop-types`
+
+Replaces `React.PropTypes` references with the `prop-types` package and adds the appropriate import statement.
+
+See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) for details.
+
+### Legacy Codemods
+
+Additional jscodeshift-based codemods from the original `react-codemod` project are available under [`codemods/legacy/`](./codemods/legacy/). See [LEGACY.md](./LEGACY.md) for the full catalog.
 
 ## Development
 
@@ -28,15 +64,28 @@ pnpm install
 pnpm run ci
 ```
 
-Run active JSSG checks only:
+Run tests:
 
 ```bash
-pnpm run test:active
-pnpm run check-types:active
+pnpm test
 ```
 
-Run the legacy snapshot test harness:
+Run type checking:
+
+```bash
+pnpm run check-types
+```
+
+Run legacy codemod tests:
 
 ```bash
 pnpm run test:legacy
 ```
+
+## Support and Contributing
+
+If you want to contribute, you're welcome to submit a pull request.
+
+## License
+
+react-codemod is [MIT licensed](./LICENSE).
