@@ -16,6 +16,8 @@ importers:
         specifier: latest
         version: 25.6.0
 
+  codemods/jssg/react-19-migration-recipe: {}
+
   codemods/jssg/react-proptypes-to-prop-types:
     dependencies:
       '@jssg/utils':

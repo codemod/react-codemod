@@ -53,6 +53,12 @@ Replaces `React.PropTypes` references with the `prop-types` package and adds the
 
 See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) for details.
 
+### `react-19-migration-recipe`
+
+Runs all React 19 migration codemods in sequence: `replace-reactdom-render`, `replace-string-ref`, `replace-act-import`, `replace-use-form-state`, and `use-context-hook`.
+
+See [`react-19-migration-recipe`](./codemods/jssg/react-19-migration-recipe/) for details.
+
 ### Legacy Codemods
 
 Additional jscodeshift-based codemods from the original `react-codemod` project are available under [`codemods/legacy/`](./codemods/legacy/). See [LEGACY.md](./LEGACY.md) for the full catalog.
