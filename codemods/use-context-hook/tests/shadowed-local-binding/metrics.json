@@ -1,0 +1,11 @@
+{
+  "use-context-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/shadowed-local-binding/input.tsx",
+        "pattern": "useContext"
+      },
+      "count": 1
+    }
+  ]
+}
