@@ -1,5 +1,5 @@
 {
-  "name": "@react/replace-reactdom-render",
+  "name": "@react-new/replace-reactdom-render",
   "version": "0.1.0",
   "description": "Replace ReactDOM.render with createRoot for React 18",
   "type": "module",

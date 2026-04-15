@@ -2,12 +2,10 @@
 
 Move `act` usage from `react-dom/test-utils` to `react` across named imports, namespace imports, and re-exports.
 
-## Run Locally
-
-Run this command from this directory:
+## Usage
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./scripts/codemod.ts
+npx codemod @react-new/replace-act-import --target <path>
 ```
 
 ## Development

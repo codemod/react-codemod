@@ -9,20 +9,20 @@ nodes:
     steps:
       - name: "Replace ReactDOM.render with createRoot"
         codemod:
-          source: "@react/replace-reactdom-render"
+          source: "@react-new/replace-reactdom-render"
 
       - name: "Replace string refs with callback refs"
         codemod:
-          source: "@react/replace-string-ref"
+          source: "@react-new/replace-string-ref"
 
       - name: "Migrate act from react-dom/test-utils to react"
         codemod:
-          source: "@react/replace-act-import"
+          source: "@react-new/replace-act-import"
 
       - name: "Replace useFormState with useActionState"
         codemod:
-          source: "@react/replace-use-form-state"
+          source: "@react-new/replace-use-form-state"
 
       - name: "Replace useContext with use"
         codemod:
-          source: "@react/use-context-hook"
+          source: "@react-new/use-context-hook"

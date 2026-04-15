@@ -2,12 +2,10 @@
 
 Replace `ReactDOM.render` and named `render` imports with `createRoot(...).render(...)`.
 
-## Run Locally
-
-Run this command from this directory:
+## Usage
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./scripts/codemod.ts
+npx codemod @react-new/replace-reactdom-render --target <path>
 ```
 
 ## Development

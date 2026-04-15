@@ -6,8 +6,8 @@ const rootReadme = fs.readFileSync(path.join(repoRoot, "README.md"), "utf8");
 const legacyReadme = fs.readFileSync(path.join(repoRoot, "LEGACY.md"), "utf8");
 
 const forbiddenRootPatterns = [
-  { label: "Codemod Registry command claim", regex: /npx codemod react\// },
-  { label: "package-style codemod run claim", regex: /codemod run @react\// },
+  { label: "old registry command claim", regex: /npx codemod react\// },
+  { label: "old package-style codemod run claim", regex: /codemod run @react\// },
 ];
 
 for (const pattern of forbiddenRootPatterns) {
@@ -26,7 +26,7 @@ for (const name of fs.readdirSync(transformRoot)) {
   const contents = fs.readFileSync(readmePath, "utf8");
 
   if (/codemod run @react\//.test(contents) || /npx codemod react\//.test(contents)) {
-    throw new Error(`${path.relative(repoRoot, readmePath)} contains a forbidden published-run claim.`);
+    throw new Error(`${path.relative(repoRoot, readmePath)} contains a forbidden old-scope run claim.`);
   }
 }
 

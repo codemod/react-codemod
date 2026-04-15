@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react/react-proptypes-to-prop-types"
+name: "@react-new/react-proptypes-to-prop-types"
 version: "0.1.0"
 description: "Replace React.PropTypes with prop-types package"
 author: "Codemod <hello@codemod.com>"
@@ -14,6 +14,6 @@ keywords: ["React"]
 
 registry:
   access: "public"
-  visibility: "public"
+  visibility: "private"
 
 capabilities: []

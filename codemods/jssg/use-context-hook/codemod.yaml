@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react/use-context-hook"
+name: "@react-new/use-context-hook"
 version: "0.1.0"
 description: "Transform React.useContext() and useContext() to use() hook"
 author: "Codemod <hello@codemod.com>"
@@ -15,6 +15,6 @@ keywords: ["React"]
 
 registry:
   access: "public"
-  visibility: "public"
+  visibility: "private"
 
 capabilities: []

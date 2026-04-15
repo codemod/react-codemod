@@ -2,12 +2,10 @@
 
 Replace legacy React `PropTypes` usage with the `prop-types` package across imports, requires, aliases, and destructuring patterns.
 
-## Run Locally
-
-Run this command from this directory:
+## Usage
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./scripts/codemod.ts
+npx codemod @react-new/react-proptypes-to-prop-types --target <path>
 ```
 
 To override the `prop-types` module specifier, pass `--param module-name=<value>`.

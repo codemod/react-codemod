@@ -2,12 +2,10 @@
 
 Rename `useFormState` to `useActionState` in `react-dom` imports and usages.
 
-## Run Locally
-
-Run this command from this directory:
+## Usage
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./scripts/codemod.ts
+npx codemod @react-new/replace-use-form-state --target <path>
 ```
 
 ## Development

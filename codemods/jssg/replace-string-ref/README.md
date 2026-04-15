@@ -2,12 +2,10 @@
 
 Replace string refs in React class components with callback refs that assign through `this.refs`.
 
-## Run Locally
-
-Run this command from this directory:
+## Usage
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./scripts/codemod.ts
+npx codemod @react-new/replace-string-ref --target <path>
 ```
 
 ## Development

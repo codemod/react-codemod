@@ -7,9 +7,9 @@
   "scripts": {
     "lint": "node ./scripts/validate-docs.mjs",
     "test": "pnpm run test:active",
-    "test:active": "pnpm -r --filter \"@react/*\" test",
+    "test:active": "pnpm -r --filter \"@react-new/*\" test",
     "check-types": "pnpm run check-types:active",
-    "check-types:active": "pnpm -r --filter \"@react/*\" check-types",
+    "check-types:active": "pnpm -r --filter \"@react-new/*\" check-types",
     "test:legacy": "bash -lc 'cd codemods/legacy && pnpm install --ignore-workspace --frozen-lockfile --force && pnpm run test:ci'",
     "ci": "pnpm run lint && pnpm run test:active && pnpm run check-types:active && pnpm run test:legacy"
   },

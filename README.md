@@ -6,60 +6,92 @@ All codemods are free and open source, with the source code available in this re
 
 ## Usage
 
-Run a codemod from this directory using the [Codemod CLI](https://go.codemod.com/cli-docs):
+We recommend using the [`codemod`](https://go.codemod.com/github) command for running codemods.
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./codemods/jssg/<transform>/scripts/codemod.ts
+npx codemod <codemod-name> --target <path>
 ```
 
-- `<transform>` — name of the codemod (see available codemods below)
+- `<codemod-name>` — name of the codemod (see available codemods below)
 - `<path>` — files or directory to transform
+
+Check [codemod docs](https://go.codemod.com/cli-docs) for the full list of available commands.
 
 ## Available Codemods
 
-### `use-context-hook`
+All React codemods are also available in the [Codemod Registry](https://go.codemod.com/react-codemods).
 
-Replaces usages of `React.useContext(...)` with `React.use(...)`.
+#### `react-19-migration-recipe`
 
-See [`use-context-hook`](./codemods/jssg/use-context-hook/) for details.
+Runs all React 19 migration codemods in sequence.
 
-### `replace-act-import`
-
-Updates `act` import path from `react-dom/test-utils` to `react`.
-
-See [`replace-act-import`](./codemods/jssg/replace-act-import/) for details.
-
-### `replace-string-ref`
-
-Replaces deprecated string refs with callback refs.
-
-See [`replace-string-ref`](./codemods/jssg/replace-string-ref/) for details.
-
-### `replace-use-form-state`
-
-Replaces usages of `useFormState()` with `useActionState()`.
-
-See [`replace-use-form-state`](./codemods/jssg/replace-use-form-state/) for details.
-
-### `replace-reactdom-render`
-
-Replaces usages of `ReactDOM.render()` with `createRoot(node).render()`.
-
-See [`replace-reactdom-render`](./codemods/jssg/replace-reactdom-render/) for details.
-
-### `react-proptypes-to-prop-types`
-
-Replaces `React.PropTypes` references with the `prop-types` package and adds the appropriate import statement.
-
-See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) for details.
-
-### `react-19-migration-recipe`
-
-Runs all React 19 migration codemods in sequence: `replace-reactdom-render`, `replace-string-ref`, `replace-act-import`, `replace-use-form-state`, and `use-context-hook`.
+```bash
+npx codemod @react-new/react-19-migration-recipe --target <path>
+```
 
 See [`react-19-migration-recipe`](./codemods/jssg/react-19-migration-recipe/) for details.
 
-### Legacy Codemods
+#### `use-context-hook`
+
+Replaces usages of `React.useContext(...)` with `React.use(...)`.
+
+```bash
+npx codemod @react-new/use-context-hook --target <path>
+```
+
+See [`use-context-hook`](./codemods/jssg/use-context-hook/) for details.
+
+#### `replace-act-import`
+
+Updates `act` import path from `react-dom/test-utils` to `react`.
+
+```bash
+npx codemod @react-new/replace-act-import --target <path>
+```
+
+See [`replace-act-import`](./codemods/jssg/replace-act-import/) for details.
+
+#### `replace-string-ref`
+
+Replaces deprecated string refs with callback refs.
+
+```bash
+npx codemod @react-new/replace-string-ref --target <path>
+```
+
+See [`replace-string-ref`](./codemods/jssg/replace-string-ref/) for details.
+
+#### `replace-use-form-state`
+
+Replaces usages of `useFormState()` with `useActionState()`.
+
+```bash
+npx codemod @react-new/replace-use-form-state --target <path>
+```
+
+See [`replace-use-form-state`](./codemods/jssg/replace-use-form-state/) for details.
+
+#### `replace-reactdom-render`
+
+Replaces usages of `ReactDOM.render()` with `createRoot(node).render()`.
+
+```bash
+npx codemod @react-new/replace-reactdom-render --target <path>
+```
+
+See [`replace-reactdom-render`](./codemods/jssg/replace-reactdom-render/) for details.
+
+#### `react-proptypes-to-prop-types`
+
+Replaces `React.PropTypes` references with the `prop-types` package and adds the appropriate import statement.
+
+```bash
+npx codemod @react-new/react-proptypes-to-prop-types --target <path>
+```
+
+See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) for details.
+
+#### Legacy Codemods
 
 Additional jscodeshift-based codemods from the original `react-codemod` project are available under [`codemods/legacy/`](./codemods/legacy/). See [LEGACY.md](./LEGACY.md) for the full catalog.
 

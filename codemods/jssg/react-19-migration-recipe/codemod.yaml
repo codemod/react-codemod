@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react/react-19-migration-recipe"
+name: "@react-new/react-19-migration-recipe"
 version: "0.1.0"
 description: "Run all React 19 migration codemods in sequence"
 author: "Codemod <hello@codemod.com>"
@@ -14,6 +14,6 @@ keywords: ["React", "migration", "recipe"]
 
 registry:
   access: "public"
-  visibility: "public"
+  visibility: "private"
 
 capabilities: []

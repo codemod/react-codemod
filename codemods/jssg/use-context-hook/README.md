@@ -2,12 +2,10 @@
 
 Transform `React.useContext()` and `useContext()` calls into `use()`.
 
-## Run Locally
-
-Run this command from this directory:
+## Usage
 
 ```bash
-pnpm dlx codemod@latest jssg run --language tsx --target <path> ./scripts/codemod.ts
+npx codemod @react-new/use-context-hook --target <path>
 ```
 
 ## Development
