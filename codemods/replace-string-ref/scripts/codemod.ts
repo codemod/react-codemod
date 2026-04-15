@@ -55,6 +55,19 @@ function isInsideReactClassComponent(
   return false;
 }
 
+function isValidIdentifierName(name: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name);
+}
+
+function callbackRefText(refName: string): string {
+  const assignmentTarget = isValidIdentifierName(refName)
+    ? `this.refs.${refName}`
+    : `this.refs[${JSON.stringify(refName)}]`;
+  return `ref={(ref) => {
+        ${assignmentTarget} = ref;
+      }}`;
+}
+
 function namedReturnExpression(returnStmt: SgNode<TSX>): SgNode<TSX> | null {
   return returnStmt.children().find((child) => child.isNamed() && child.kind() !== "comment") ?? null;
 }
@@ -122,10 +135,7 @@ const transform: Transform<TSX> = async (root) => {
     if (!stringFragment) continue;
 
     const refName = stringFragment.text();
-
-    const callbackRef = `ref={(ref) => {
-        this.refs.${refName} = ref;
-      }}`;
+    const callbackRef = callbackRefText(refName);
 
     edits.push(refAttr.replace(callbackRef));
     const returnStmt = refAttr.ancestors().find((a) => a.kind() === "return_statement");

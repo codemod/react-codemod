@@ -1,0 +1,11 @@
+{
+  "string-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/non-identifier-ref-name/input.tsx",
+        "refs": "foo-bar"
+      },
+      "count": 1
+    }
+  ]
+}
