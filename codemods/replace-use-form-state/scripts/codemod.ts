@@ -13,6 +13,15 @@ const REACT_DOM_MODULE = "react-dom";
 
 type ReactDOMImport = { name: string; type: "default" | "namespace" };
 
+function importSource(node: SgNode<TSX>): string | null {
+  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
+  if (!source) return null;
+  const fragment = source.find({ rule: { kind: "string_fragment" } });
+  if (fragment) return fragment.text();
+  const text = source.text();
+  return text.length >= 2 ? text.slice(1, -1) : null;
+}
+
 function getReactDOMImport(rootNode: SgNode<TSX, "program">): ReactDOMImport | null {
   const defaultImp = getImport(rootNode, { type: "default", from: REACT_DOM_MODULE });
   if (defaultImp) return { name: defaultImp.alias, type: "default" };
@@ -39,17 +48,31 @@ function getReactDOMImport(rootNode: SgNode<TSX, "program">): ReactDOMImport | n
   return null;
 }
 
+function firstReactDOMImport(rootNode: SgNode<TSX, "program">): SgNode<TSX> | null {
+  return rootNode.findAll({ rule: { kind: "import_statement" } })
+    .find((node) => importSource(node) === REACT_DOM_MODULE) ?? null;
+}
+
+function matchingUseFormStateSpecifier(importNode: SgNode<TSX>): SgNode<TSX> | null {
+  return importNode.findAll({
+    rule: {
+      kind: "import_specifier",
+    },
+  }).find((spec) => spec.field("name")?.text() === "useFormState") ?? null;
+}
+
+function replacementImportSpecifierText(usedName: string): string {
+  return usedName === "useFormState"
+    ? "useActionState"
+    : `useActionState as ${usedName}`;
+}
+
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
   const edits: Edit[] = [];
   const metric = useMetricAtom("replace-use-form-state-migrations");
 
   const reactDOMImport = getReactDOMImport(rootNode);
-  const useFormStateNamedImport = getImport(rootNode, {
-    type: "named",
-    name: "useFormState",
-    from: REACT_DOM_MODULE,
-  });
 
   if (reactDOMImport) {
     const memberCalls = rootNode.findAll({
@@ -74,44 +97,33 @@ const transform: Transform<TSX> = async (root) => {
     }
   }
 
-  if (useFormStateNamedImport && !useFormStateNamedImport.isNamespace) {
-    const importNode = useFormStateNamedImport.node.ancestors().find(
-      (a) => a.kind() === "import_statement"
-    );
-    if (importNode) {
-      const specifiers = importNode.findAll({
-        rule: {
-          kind: "import_specifier",
-          has: {
-            kind: "identifier",
-            regex: "^useFormState$",
-          },
-        },
-      });
-      for (const spec of specifiers) {
-        const nameNode = spec.field("name");
-        if (nameNode && nameNode.text() === "useFormState") {
-          edits.push(nameNode.replace("useActionState"));
-        }
-      }
-    }
-
-    const localName = useFormStateNamedImport.alias;
-    if (localName === "useFormState") {
-      const refs = useFormStateNamedImport.node.references();
-      for (const fileRef of refs) {
-        if (fileRef.root.filename() !== root.filename()) continue;
-        for (const node of fileRef.nodes) {
-          const inImport = node.ancestors().some((a) => a.kind() === "import_statement");
-          if (!inImport) {
-            edits.push(node.replace("useActionState"));
-          }
-        }
-      }
-    }
-    metric.increment({ file: metricFile(root.filename()), pattern: "named-import" });
+  const importNode = firstReactDOMImport(rootNode);
+  const specifier = importNode ? matchingUseFormStateSpecifier(importNode) : null;
+  if (!specifier) {
+    if (edits.length === 0) return null;
+    return rootNode.commitEdits(edits);
   }
 
+  const localName = specifier.field("alias")?.text() ?? specifier.field("name")?.text() ?? "useFormState";
+  edits.push(specifier.replace(replacementImportSpecifierText(localName)));
+
+  if (localName === "useFormState") {
+    const renameTargets = rootNode.findAll({
+      rule: {
+        any: [
+          { kind: "identifier", regex: "^useFormState$" },
+          { kind: "type_identifier", regex: "^useFormState$" },
+        ],
+      },
+    });
+
+    for (const node of renameTargets) {
+      if (node.ancestors().some((ancestor) => ancestor.kind() === "import_statement")) continue;
+      edits.push(node.replace("useActionState"));
+    }
+  }
+
+  metric.increment({ file: metricFile(root.filename()), pattern: "named-import" });
   if (edits.length === 0) return null;
   return rootNode.commitEdits(edits);
 };

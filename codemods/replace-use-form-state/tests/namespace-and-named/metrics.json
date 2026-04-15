@@ -1,0 +1,11 @@
+{
+  "replace-use-form-state-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/namespace-and-named/input.tsx",
+        "pattern": "member-call"
+      },
+      "count": 1
+    }
+  ]
+}
