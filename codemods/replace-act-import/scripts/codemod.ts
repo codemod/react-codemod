@@ -162,20 +162,7 @@ const transform: Transform<TSX> = async (root) => {
     const hasExportAll =
       exp.has({ rule: { kind: "namespace_export" } }) ||
       exp.children().some((c) => c.text() === "*");
-    const hasNamedAct = exp.find({
-      rule: {
-        kind: "export_specifier",
-        has: { kind: "identifier", regex: "^act$" },
-      },
-    });
-
-    if (hasNamedAct) {
-      const stringNode = exp.find({ rule: { kind: "string", regex: "react-dom/test-utils" } });
-      if (stringNode) {
-        edits.push(stringNode.replace('"react"'));
-        metric.increment({ file: metricFile(root.filename()), pattern: "re-export" });
-      }
-    } else if (hasExportAll) {
+    if (hasExportAll) {
       const insertPos = exp.range().end.index;
       edits.push({
         startPos: insertPos,
