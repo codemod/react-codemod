@@ -55,6 +55,27 @@ function isInsideReactClassComponent(
   return false;
 }
 
+function namedReturnExpression(returnStmt: SgNode<TSX>): SgNode<TSX> | null {
+  return returnStmt.children().find((child) => child.isNamed() && child.kind() !== "comment") ?? null;
+}
+
+function isFragmentElement(node: SgNode<TSX>): boolean {
+  if (node.kind() !== "jsx_element") return false;
+  const opening = node.children().find((child) => child.kind() === "jsx_opening_element");
+  if (!opening) return false;
+  const tagName = opening.children().find((child) =>
+    child.kind() === "identifier" || child.kind() === "property_identifier"
+  );
+  return !tagName;
+}
+
+function shouldWrapReturnExpression(node: SgNode<TSX> | null): node is SgNode<TSX> {
+  if (!node) return false;
+  if (node.kind() === "jsx_self_closing_element") return true;
+  if (node.kind() === "jsx_element") return !isFragmentElement(node);
+  return false;
+}
+
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
   const edits: Edit[] = [];
@@ -107,25 +128,24 @@ const transform: Transform<TSX> = async (root) => {
       }}`;
 
     edits.push(refAttr.replace(callbackRef));
-    const jsx = refAttr.ancestors().find((a) =>
-      a.kind() === "jsx_self_closing_element" || a.kind() === "jsx_element"
-    );
     const returnStmt = refAttr.ancestors().find((a) => a.kind() === "return_statement");
+    const returnExpr = returnStmt ? namedReturnExpression(returnStmt) : null;
     if (
-      jsx &&
+      returnExpr &&
       returnStmt &&
-      jsx.parent()?.kind() !== "parenthesized_expression" &&
-      !wrappedJsxStarts.has(jsx.range().start.index)
+      shouldWrapReturnExpression(returnExpr) &&
+      returnExpr.parent()?.kind() !== "parenthesized_expression" &&
+      !wrappedJsxStarts.has(returnExpr.range().start.index)
     ) {
-      wrappedJsxStarts.add(jsx.range().start.index);
+      wrappedJsxStarts.add(returnExpr.range().start.index);
       edits.push({
-        startPos: jsx.range().start.index,
-        endPos: jsx.range().start.index,
+        startPos: returnExpr.range().start.index,
+        endPos: returnExpr.range().start.index,
         insertedText: "(",
       });
       edits.push({
-        startPos: jsx.range().end.index,
-        endPos: jsx.range().end.index,
+        startPos: returnExpr.range().end.index,
+        endPos: returnExpr.range().end.index,
         insertedText: ")",
       });
     }

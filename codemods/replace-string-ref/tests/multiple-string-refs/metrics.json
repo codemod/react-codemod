@@ -1,0 +1,11 @@
+{
+  "string-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-string-refs/input.tsx",
+        "refs": "a,b"
+      },
+      "count": 2
+    }
+  ]
+}
