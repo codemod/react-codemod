@@ -20,6 +20,4 @@ pnpm test
 pnpm check-types
 ```
 
-The checked-in `tests/` directory preserves the exact legacy fixture surface. Additional rollout-safety parity cases are verified in `scripts/parity-tests.mjs`.
-
 The remaining blocker is full parity for shareable / fully resolved ESLint config resolution. The legacy codemod delegated that to ESLint’s full config machinery. Inside JSSG, I implemented a clean classic-config reader that covers the legacy fixture cases and direct local config branches, but I did not ship a heavier config-execution workaround for every ESLint extends shape.
