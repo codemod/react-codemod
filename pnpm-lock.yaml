@@ -16,31 +16,7 @@ importers:
         specifier: latest
         version: 25.6.0
 
-  codemods/create-element-to-jsx:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/error-boundaries:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/find-dom-node:
+  codemods/jssg/react-proptypes-to-prop-types:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -56,43 +32,7 @@ importers:
         specifier: latest
         version: 6.0.2
 
-  codemods/manual-bind-to-arrow:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/pure-component:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/pure-render-mixin:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/react-dom-to-react-dom-factories:
+  codemods/jssg/replace-act-import:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -108,7 +48,7 @@ importers:
         specifier: latest
         version: 6.0.2
 
-  codemods/react-native-view-prop-types:
+  codemods/jssg/replace-reactdom-render:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -124,7 +64,7 @@ importers:
         specifier: latest
         version: 6.0.2
 
-  codemods/react-proptypes-to-prop-types:
+  codemods/jssg/replace-string-ref:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -140,31 +80,7 @@ importers:
         specifier: latest
         version: 6.0.2
 
-  codemods/react-to-react-dom:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/remove-context-provider:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/remove-forward-ref:
+  codemods/jssg/replace-use-form-state:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
@@ -180,111 +96,7 @@ importers:
         specifier: latest
         version: 6.0.2
 
-  codemods/rename-unsafe-lifecycles:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/replace-act-import:
-    dependencies:
-      '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/replace-reactdom-render:
-    dependencies:
-      '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/replace-string-ref:
-    dependencies:
-      '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/replace-use-form-state:
-    dependencies:
-      '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/sort-comp:
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/update-react-imports:
-    dependencies:
-      '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
-    devDependencies:
-      '@codemod.com/jssg-types':
-        specifier: latest
-        version: 1.5.1
-      '@types/node':
-        specifier: latest
-        version: 25.6.0
-      typescript:
-        specifier: latest
-        version: 6.0.2
-
-  codemods/use-context-hook:
+  codemods/jssg/use-context-hook:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
