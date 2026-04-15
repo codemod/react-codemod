@@ -11,6 +11,8 @@
     "check-types": "pnpm run check-types:active",
     "check-types:active": "pnpm -r --filter \"@react-new/*\" check-types",
     "test:legacy": "bash -lc 'cd codemods/legacy && pnpm install --ignore-workspace --frozen-lockfile --force && pnpm run test:ci'",
+    "changeset": "changeset",
+    "version-packages": "changeset version && bash scripts/sync-codemod-versions.sh",
     "ci": "pnpm run lint && pnpm run test:active && pnpm run check-types:active && pnpm run test:legacy"
   },
   "keywords": [
@@ -26,6 +28,7 @@
   },
   "packageManager": "pnpm@9.14.2",
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@types/node": "latest"
   },
   "dependencies": {
