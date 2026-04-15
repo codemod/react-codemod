@@ -1,7 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport, addImport, removeImport } from "@jssg/utils/javascript/imports";
+import { getImport, removeImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -12,6 +12,75 @@ const TEST_UTILS_MODULE = "react-dom/test-utils";
 const REACT_MODULE = "react";
 
 type TestUtilsImport = { name: string; type: "default" | "namespace" };
+type NamedActImport = { importNode: SgNode<TSX>; specifier: SgNode<TSX>; alias: string | null };
+
+function sourceText(node: SgNode<TSX>): string | null {
+  const fragment = node.find({ rule: { kind: "string_fragment" } });
+  if (fragment) return fragment.text();
+  const text = node.text();
+  if (text.length >= 2) return text.slice(1, -1);
+  return null;
+}
+
+function importSource(node: SgNode<TSX>): string | null {
+  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
+  return source ? sourceText(source) : null;
+}
+
+function isWhitespace(char: string | undefined): boolean {
+  return char === " " || char === "\t" || char === "\n" || char === "\r";
+}
+
+function removeNodeWithComma(node: SgNode<TSX>, source: string): Edit {
+  let start = node.range().start.index;
+  let end = node.range().end.index;
+
+  let i = end;
+  while (isWhitespace(source[i])) i++;
+  if (source[i] === ",") {
+    end = i + 1;
+    while (isWhitespace(source[end])) end++;
+  } else {
+    let j = start - 1;
+    while (isWhitespace(source[j])) j--;
+    if (source[j] === ",") start = j;
+  }
+
+  return { startPos: start, endPos: end, insertedText: "" };
+}
+
+function namedImportText(alias: string | null): string {
+  return alias && alias !== "act" ? `act as ${alias}` : "act";
+}
+
+function countImportSpecifiers(importNode: SgNode<TSX>): number {
+  return importNode.findAll({ rule: { kind: "import_specifier" } }).length;
+}
+
+function findExistingReactNamedImport(rootNode: SgNode<TSX, "program">): SgNode<TSX> | null {
+  return rootNode.findAll({ rule: { kind: "import_statement" } }).find((imp) =>
+    importSource(imp) === REACT_MODULE && imp.find({ rule: { kind: "named_imports" } }) !== null
+  ) ?? null;
+}
+
+function findNamedActImports(rootNode: SgNode<TSX, "program">): NamedActImport[] {
+  const imports: NamedActImport[] = [];
+
+  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (importSource(importNode) !== TEST_UTILS_MODULE) continue;
+
+    for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
+      if (specifier.field("name")?.text() !== "act") continue;
+      imports.push({
+        importNode,
+        specifier,
+        alias: specifier.field("alias")?.text() ?? null,
+      });
+    }
+  }
+
+  return imports;
+}
 
 function getTestUtilsImport(rootNode: SgNode<TSX, "program">): (TestUtilsImport & { importNode?: SgNode<TSX> }) | null {
   const defaultImp = getImport(rootNode, { type: "default", from: TEST_UTILS_MODULE });
@@ -48,11 +117,12 @@ function getTestUtilsImport(rootNode: SgNode<TSX, "program">): (TestUtilsImport 
 
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
+  const source = rootNode.text();
   const edits: Edit[] = [];
   const metric = useMetricAtom("replace-act-import-migrations");
 
   const testUtilsImport = getTestUtilsImport(rootNode);
-  const actNamedImport = getImport(rootNode, { type: "named", name: "act", from: TEST_UTILS_MODULE });
+  const namedActImports = findNamedActImports(rootNode);
 
   if (testUtilsImport) {
     const actMemberCalls = rootNode.findAll({
@@ -107,44 +177,78 @@ const transform: Transform<TSX> = async (root) => {
     }
   }
 
-  if (actNamedImport && !actNamedImport.isNamespace) {
-    const importNode = actNamedImport.node.ancestors().find((a) => a.kind() === "import_statement");
-    const specifierCount = importNode?.findAll({ rule: { kind: "import_specifier" } }).length ?? 0;
-    if (importNode && specifierCount === 1) {
-      const alias =
-        actNamedImport.alias && actNamedImport.alias !== "act"
-          ? `act as ${actNamedImport.alias}`
-          : "act";
-      const existingReactNamedImport = rootNode.findAll({ rule: { kind: "import_statement" } }).find((imp) =>
-        imp.find({ rule: { kind: "string", has: { kind: "string_fragment", regex: "^react$" } } }) !== null &&
-        imp.find({ rule: { kind: "named_imports" } }) !== null
-      );
-      if (existingReactNamedImport) {
+  if (namedActImports.length > 0) {
+    const existingReactNamedImport = findExistingReactNamedImport(rootNode);
+    const existingReactActSpecifiers = new Set<string>();
+    if (existingReactNamedImport) {
+      for (const specifier of existingReactNamedImport.findAll({ rule: { kind: "import_specifier" } })) {
+        if (specifier.field("name")?.text() !== "act") continue;
+        existingReactActSpecifiers.add(namedImportText(specifier.field("alias")?.text() ?? null));
+      }
+    }
+
+    const wantedActSpecifiers = Array.from(
+      new Set(namedActImports.map((entry) => namedImportText(entry.alias))),
+    );
+    const specifiersToAdd = wantedActSpecifiers.filter((text) => !existingReactActSpecifiers.has(text));
+
+    let replacementImportId: number | null = null;
+    if (existingReactNamedImport) {
+      if (specifiersToAdd.length > 0) {
         const namedImports = existingReactNamedImport.find({ rule: { kind: "named_imports" } });
         if (namedImports) {
           const insertPos = namedImports.range().end.index - 1;
-          edits.push({ startPos: insertPos, endPos: insertPos, insertedText: `, ${alias}` });
+          edits.push({
+            startPos: insertPos,
+            endPos: insertPos,
+            insertedText: `, ${specifiersToAdd.join(", ")}`,
+          });
         }
-        edits.push(importNode.replace(""));
-      } else {
-        edits.push(importNode.replace(`import { ${alias} } from "react";`));
-
       }
-    } else {
-      const addEdit = addImport(rootNode, {
-        type: "named",
-        specifiers: [{ name: "act", alias: actNamedImport.alias }],
-        from: REACT_MODULE,
-      });
-      if (addEdit) edits.push(addEdit);
+    } else if (specifiersToAdd.length > 0) {
+      const firstNamedActImport = namedActImports[0]!.importNode;
+      const firstImportActCount = namedActImports.filter((entry) =>
+        entry.importNode.id() === firstNamedActImport.id(),
+      ).length;
+      const replacementText = `import { ${specifiersToAdd.join(", ")} } from "react";`;
 
-      const removeEdit = removeImport(rootNode, {
-        type: "named",
-        specifiers: ["act"],
-        from: TEST_UTILS_MODULE,
-      });
-      if (removeEdit) edits.push(removeEdit);
+      if (countImportSpecifiers(firstNamedActImport) === firstImportActCount) {
+        edits.push(firstNamedActImport.replace(replacementText));
+        replacementImportId = firstNamedActImport.id();
+      } else {
+        edits.push({
+          startPos: firstNamedActImport.range().start.index,
+          endPos: firstNamedActImport.range().start.index,
+          insertedText: `${replacementText}\n`,
+        });
+      }
     }
+
+    const importsById = new Map<number, { importNode: SgNode<TSX>; specifiers: SgNode<TSX>[] }>();
+    for (const entry of namedActImports) {
+      const current = importsById.get(entry.importNode.id());
+      if (current) {
+        current.specifiers.push(entry.specifier);
+      } else {
+        importsById.set(entry.importNode.id(), {
+          importNode: entry.importNode,
+          specifiers: [entry.specifier],
+        });
+      }
+    }
+
+    for (const [importId, group] of importsById) {
+      if (replacementImportId === importId) continue;
+
+      if (countImportSpecifiers(group.importNode) === group.specifiers.length) {
+        edits.push(group.importNode.replace(""));
+      } else {
+        for (const specifier of group.specifiers) {
+          edits.push(removeNodeWithComma(specifier, source));
+        }
+      }
+    }
+
     metric.increment({ file: metricFile(root.filename()), pattern: "named-import" });
   }
 

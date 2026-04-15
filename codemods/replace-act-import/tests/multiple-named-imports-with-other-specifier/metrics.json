@@ -1,0 +1,11 @@
+{
+  "replace-act-import-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-named-imports-with-other-specifier/input.tsx",
+        "pattern": "named-import"
+      },
+      "count": 1
+    }
+  ]
+}
