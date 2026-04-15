@@ -6,6 +6,13 @@
         "pattern": "member-call"
       },
       "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "tests/namespace-and-named/input.tsx",
+        "pattern": "named-import"
+      },
+      "count": 1
     }
   ]
 }

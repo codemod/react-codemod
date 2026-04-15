@@ -1,13 +1,62 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
   return filename.startsWith(cwd) ? filename.slice(cwd.length) : filename;
 }
 
+type NamedUseContextImport = { specifier: SgNode<TSX>; localName: string };
+
+function sourceText(node: SgNode<TSX>): string | null {
+  const fragment = node.find({ rule: { kind: "string_fragment" } });
+  if (fragment) return fragment.text();
+  const text = node.text();
+  return text.length >= 2 ? text.slice(1, -1) : null;
+}
+
+function importSource(node: SgNode<TSX>): string | null {
+  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
+  return source ? sourceText(source) : null;
+}
+
+function findReactMemberImportNames(rootNode: SgNode<TSX, "program">): Set<string> {
+  const names = new Set<string>();
+
+  for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (importSource(imp) !== "react") continue;
+
+    const importClause = imp.find({ rule: { kind: "import_clause" } });
+    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
+    if (defaultIdentifier) names.add(defaultIdentifier.text());
+
+    const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
+    const namespaceName =
+      namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
+    if (namespaceName) names.add(namespaceName.text());
+  }
+
+  return names;
+}
+
+function findNamedUseContextImports(rootNode: SgNode<TSX, "program">): NamedUseContextImport[] {
+  const imports: NamedUseContextImport[] = [];
+
+  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (importSource(importNode) !== "react") continue;
+
+    for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
+      if (specifier.field("name")?.text() !== "useContext") continue;
+      imports.push({
+        specifier,
+        localName: specifier.field("alias")?.text() ?? "useContext",
+      });
+    }
+  }
+
+  return imports;
+}
 
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
@@ -15,13 +64,8 @@ const transform: Transform<TSX> = async (root) => {
 
   const transformMetric = useMetricAtom("use-context-transformations");
 
-  const reactDefaultImport = getImport(rootNode, { type: "default", from: "react" });
-  const reactDefaultName = reactDefaultImport?.alias || "React";
-
-  const useContextImport = getImport(rootNode, { type: "named", name: "useContext", from: "react" });
-  const useContextLocalName = useContextImport?.alias;
-
-  let needsUseNamedImport = false;
+  const reactMemberImportNames = findReactMemberImportNames(rootNode);
+  const namedUseContextImports = findNamedUseContextImports(rootNode);
 
   const shouldSkipLegacyIdentifierRename = (node: SgNode<TSX>): boolean => {
     const parent = node.parent();
@@ -35,7 +79,7 @@ const transform: Transform<TSX> = async (root) => {
     }
     return false;
   };
-  
+
   const reactMemberCalls = rootNode.findAll({
     rule: {
       kind: "call_expression",
@@ -47,7 +91,7 @@ const transform: Transform<TSX> = async (root) => {
             has: {
               field: "object",
               kind: "identifier",
-              regex: `^${reactDefaultName}$`,
+              regex: ".*",
             },
           },
           {
@@ -62,89 +106,85 @@ const transform: Transform<TSX> = async (root) => {
     },
   });
 
+  let reactMemberCallCount = 0;
   for (const call of reactMemberCalls) {
-    const propertyNode = call.find({
-      rule: {
-        kind: "property_identifier",
-        regex: "^useContext$",
-      },
-    });
+    const functionNode = call.field("function");
+    const objectNode = functionNode?.field("object");
+    if (!objectNode || !reactMemberImportNames.has(objectNode.text())) continue;
 
-    if (propertyNode) {
-      edits.push(propertyNode.replace("use"));
-      transformMetric.increment({ 
-        pattern: "React.useContext", 
-        file: metricFile(root.filename()) 
-      });
-    }
+    const propertyNode = functionNode?.field("property");
+    if (!propertyNode) continue;
+
+    edits.push(propertyNode.replace("use"));
+    reactMemberCallCount += 1;
   }
 
-  if (useContextLocalName) {
+  if (reactMemberCallCount > 0) {
+    transformMetric.increment({
+      pattern: "React.useContext",
+      file: metricFile(root.filename()),
+    }, reactMemberCallCount);
+  }
+
+  const activeLocalNames = new Map<string, number>();
+  for (const localName of new Set(namedUseContextImports.map((entry) => entry.localName))) {
     const useContextCalls = rootNode.findAll({
       rule: {
         kind: "call_expression",
         has: {
           field: "function",
           kind: "identifier",
-          regex: `^${useContextLocalName}$`,
+          regex: `^${localName}$`,
         },
       },
     });
 
-    const hasUseContextCalls = useContextCalls.length > 0;
-    
-    if (hasUseContextCalls) {
-      const isAliased = useContextImport && useContextImport.alias !== "useContext";
-      
-      if (!isAliased) {
-        const renameTargets = rootNode.findAll({
-          rule: {
-            any: [
-              { kind: "identifier", regex: `^${useContextLocalName}$` },
-              { kind: "type_identifier", regex: `^${useContextLocalName}$` },
-            ],
-          },
-        });
-
-        for (const node of renameTargets) {
-          if (shouldSkipLegacyIdentifierRename(node)) continue;
-          edits.push(node.replace("use"));
-        }
-        transformMetric.increment({ 
-          pattern: "useContext", 
-          file: metricFile(root.filename()) 
-        }, useContextCalls.length);
-      } else {
-        transformMetric.increment({ 
-          pattern: "useContext (aliased)", 
-          file: metricFile(root.filename()) 
-        }, useContextCalls.length);
-      }
-      
-      needsUseNamedImport = true;
+    if (useContextCalls.length > 0) {
+      activeLocalNames.set(localName, useContextCalls.length);
     }
   }
 
-  if (needsUseNamedImport && useContextImport) {
-    const importStatement = useContextImport.node.ancestors().find(
-      (a) => a.kind() === "import_statement"
-    );
-    
-    if (importStatement) {
-      const importText = importStatement.text();
-      let newImportText: string;
-      
-      if (useContextImport.alias !== "useContext") {
-        newImportText = importText.replace(
-          new RegExp(`\\buseContext\\s+as\\s+${useContextImport.alias}\\b`),
-          `use as ${useContextImport.alias}`
-        );
-      } else {
-        newImportText = importText.replace(/\buseContext\b/, "use");
-      }
-      
-      edits.push(importStatement.replace(newImportText));
+  if (activeLocalNames.has("useContext")) {
+    const renameTargets = rootNode.findAll({
+      rule: {
+        any: [
+          { kind: "identifier", regex: "^useContext$" },
+          { kind: "type_identifier", regex: "^useContext$" },
+        ],
+      },
+    });
+
+    for (const node of renameTargets) {
+      if (shouldSkipLegacyIdentifierRename(node)) continue;
+      edits.push(node.replace("use"));
     }
+  }
+
+  for (const entry of namedUseContextImports) {
+    if (!activeLocalNames.has(entry.localName)) continue;
+    const replacementText = entry.localName === "useContext" ? "use" : `use as ${entry.localName}`;
+    edits.push(entry.specifier.replace(replacementText));
+  }
+
+  const unaliasedCallCount = activeLocalNames.get("useContext") ?? 0;
+  if (unaliasedCallCount > 0) {
+    transformMetric.increment({
+      pattern: "useContext",
+      file: metricFile(root.filename()),
+    }, unaliasedCallCount);
+  }
+
+  let aliasedCallCount = 0;
+  for (const [localName, count] of activeLocalNames) {
+    if (localName === "useContext") continue;
+    aliasedCallCount += count;
+  }
+
+  if (aliasedCallCount > 0) {
+    transformMetric.increment({
+      pattern: "useContext (aliased)",
+      file: metricFile(root.filename()),
+    }, aliasedCallCount);
   }
 
   if (edits.length === 0) {

@@ -19,39 +19,28 @@ function isInsideReactClassComponent(
   
   const heritage = classDecl.children().find((c) => c.kind() === "class_heritage");
   if (!heritage) return false;
-  
-  // Check for React.Component or React.PureComponent
-  const memberExpressions = heritage.findAll({
-    rule: { kind: "member_expression" },
-  });
-  
-  for (const memberExpr of memberExpressions) {
-    const object = memberExpr.field("object");
-    const property = memberExpr.field("property");
-    
-    if (object && property) {
-      const objectText = object.text();
-      const propertyText = property.text();
-      
-      if (objectText === reactName && (propertyText === "Component" || propertyText === "PureComponent")) {
-        return true;
-      }
-    }
+
+  const extendsClause = heritage.children().find((child) => child.kind() === "extends_clause");
+  const directSuperclass = extendsClause?.children().find(
+    (child) => child.isNamed() && child.kind() !== "type_arguments",
+  );
+  if (!directSuperclass) return false;
+
+  if (directSuperclass.kind() === "member_expression") {
+    const object = directSuperclass.field("object");
+    const property = directSuperclass.field("property");
+    return !!(
+      object &&
+      property &&
+      object.text() === reactName &&
+      (property.text() === "Component" || property.text() === "PureComponent")
+    );
   }
-  
-  // Check for named imports like Component or PureComponent
-  if (componentNamesList.length > 0) {
-    const identifiers = heritage.findAll({
-      rule: { kind: "identifier" },
-    });
-    
-    for (const id of identifiers) {
-      if (componentNamesList.includes(id.text())) {
-        return true;
-      }
-    }
+
+  if (directSuperclass.kind() === "identifier") {
+    return componentNamesList.includes(directSuperclass.text());
   }
-  
+
   return false;
 }
 
