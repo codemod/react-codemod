@@ -63,11 +63,7 @@ function findNamedUseFormStateImports(rootNode: SgNode<TSX, "program">): NamedUs
   return imports;
 }
 
-function replacementImportSpecifierText(usedName: string): string {
-  return usedName === "useFormState"
-    ? "useActionState"
-    : `useActionState as ${usedName}`;
-}
+const REACT_MODULE = "react";
 
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
@@ -76,6 +72,8 @@ const transform: Transform<TSX> = async (root) => {
 
   const reactDOMMemberImportNames = findReactDOMMemberImportNames(rootNode);
   const namedUseFormStateImports = findNamedUseFormStateImports(rootNode);
+
+  let needsReactImport = false;
 
   if (reactDOMMemberImportNames.size > 0) {
     const memberCalls = rootNode.findAll({
@@ -91,38 +89,84 @@ const transform: Transform<TSX> = async (root) => {
     for (const member of memberCalls) {
       const objNode = member.field("object");
       if (objNode && reactDOMMemberImportNames.has(objNode.text())) {
-        const propNode = member.field("property");
-        if (propNode) {
-          edits.push(propNode.replace("useActionState"));
-          metric.increment({ file: metricFile(root.filename()), pattern: "member-call" });
-        }
+        // Replace the entire member expression (ReactDOM.useFormState) with just useActionState
+        edits.push(member.replace("useActionState"));
+        needsReactImport = true;
+        metric.increment({ file: metricFile(root.filename()), pattern: "member-call" });
       }
     }
   }
 
   if (namedUseFormStateImports.length > 0) {
-    let shouldRenameUnaliasedUses = false;
+    // Track import statements we've already edited to avoid duplicate edits
+    const handledImportRanges = new Set<string>();
 
     for (const entry of namedUseFormStateImports) {
-      edits.push(entry.specifier.replace(replacementImportSpecifierText(entry.localName)));
-      if (entry.localName === "useFormState") {
-        shouldRenameUnaliasedUses = true;
+      const rangeKey = `${entry.importNode.range().start.index}-${entry.importNode.range().end.index}`;
+      if (!handledImportRanges.has(rangeKey)) {
+        handledImportRanges.add(rangeKey);
+
+        // Count other specifiers in this import (non-useFormState)
+        const allSpecifiers = entry.importNode.findAll({ rule: { kind: "import_specifier" } });
+        const otherSpecifiers = allSpecifiers.filter(
+          (s) => s.field("name")?.text() !== "useFormState"
+        );
+        const importClause = entry.importNode.find({ rule: { kind: "import_clause" } });
+        const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
+
+        // Detect the quote style from the original import source
+        const sourceNode = entry.importNode.field("source") ?? entry.importNode.find({ rule: { kind: "string" } });
+        const quoteChar = sourceNode?.text().startsWith("'") ? "'" : '"';
+
+        const reactImportSpecifier = entry.localName !== "useFormState"
+          ? `useActionState as ${entry.localName}`
+          : "useActionState";
+
+        if (otherSpecifiers.length === 0 && !defaultIdentifier) {
+          // useFormState is the only specifier — replace entire import with react import
+          edits.push(entry.importNode.replace(
+            `import { ${reactImportSpecifier} } from ${quoteChar}react${quoteChar};`
+          ));
+        } else if (defaultIdentifier && otherSpecifiers.length === 0) {
+          // Has default import + useFormState only — remove named imports part, add react import
+          // e.g., import ReactDOM, { useFormState } from 'react-dom'
+          // → import ReactDOM from 'react-dom';
+          //   import { useActionState } from 'react';
+          const defaultName = defaultIdentifier.text();
+          edits.push(entry.importNode.replace(
+            `import ${defaultName} from ${quoteChar}${REACT_DOM_MODULE}${quoteChar};\nimport { ${reactImportSpecifier} } from ${quoteChar}react${quoteChar};`
+          ));
+        } else {
+          // Other specifiers remain — rebuild import without useFormState, add react import
+          const otherSpecTexts = otherSpecifiers.map((s) => {
+            const name = s.field("name")?.text();
+            const alias = s.field("alias")?.text();
+            return alias && alias !== name ? `${name} as ${alias}` : name;
+          });
+          const prefix = defaultIdentifier ? `${defaultIdentifier.text()}, ` : "";
+          edits.push(entry.importNode.replace(
+            `import ${prefix}{ ${otherSpecTexts.join(", ")} } from ${quoteChar}${REACT_DOM_MODULE}${quoteChar};\nimport { ${reactImportSpecifier} } from ${quoteChar}react${quoteChar};`
+          ));
+        }
       }
-    }
 
-    if (shouldRenameUnaliasedUses) {
-      const renameTargets = rootNode.findAll({
-        rule: {
-          any: [
-            { kind: "identifier", regex: "^useFormState$" },
-            { kind: "type_identifier", regex: "^useFormState$" },
-          ],
-        },
-      });
+      needsReactImport = true;
 
-      for (const node of renameTargets) {
-        if (node.ancestors().some((ancestor) => ancestor.kind() === "import_statement")) continue;
-        edits.push(node.replace("useActionState"));
+      if (entry.localName === "useFormState") {
+        // Rename all usage sites from useFormState to useActionState
+        const renameTargets = rootNode.findAll({
+          rule: {
+            any: [
+              { kind: "identifier", regex: "^useFormState$" },
+              { kind: "type_identifier", regex: "^useFormState$" },
+            ],
+          },
+        });
+
+        for (const node of renameTargets) {
+          if (node.ancestors().some((ancestor) => ancestor.kind() === "import_statement")) continue;
+          edits.push(node.replace("useActionState"));
+        }
       }
     }
 
@@ -130,6 +174,36 @@ const transform: Transform<TSX> = async (root) => {
   }
 
   if (edits.length === 0) return null;
+
+  // For member access cases (ReactDOM.useFormState), add import { useActionState } from "react"
+  // Named import cases are already handled above (import replacement includes the react import)
+  if (needsReactImport && namedUseFormStateImports.length === 0) {
+    const hasReactImport = getImport(rootNode, {
+      type: "named",
+      name: "useActionState",
+      from: REACT_MODULE,
+    });
+    if (!hasReactImport) {
+      // Find last import statement to insert after
+      const allImports = rootNode.findAll({ rule: { kind: "import_statement" } });
+      const lastImport = allImports[allImports.length - 1];
+      if (lastImport) {
+        const endPos = lastImport.range().end.index;
+        edits.push({
+          startPos: endPos,
+          endPos: endPos,
+          insertedText: '\nimport { useActionState } from "react";',
+        });
+      } else {
+        edits.push({
+          startPos: 0,
+          endPos: 0,
+          insertedText: 'import { useActionState } from "react";\n',
+        });
+      }
+    }
+  }
+
   return rootNode.commitEdits(edits);
 };
 

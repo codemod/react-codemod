@@ -1,0 +1,11 @@
+{
+  "reactdom-render-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/multiline-jsx/input.tsx",
+        "pattern": "ReactDOM.render"
+      },
+      "count": 1
+    }
+  ]
+}

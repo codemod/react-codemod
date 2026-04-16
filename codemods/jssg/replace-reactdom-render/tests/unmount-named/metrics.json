@@ -1,0 +1,11 @@
+{
+  "reactdom-render-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/unmount-named/input.tsx",
+        "pattern": "unmountComponentAtNode"
+      },
+      "count": 1
+    }
+  ]
+}
