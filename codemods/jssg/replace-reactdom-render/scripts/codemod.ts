@@ -97,7 +97,7 @@ const transform: Transform<TSX> = async (root) => {
   const getIndent = (statement: SgNode<TSX>): string => {
     const line = sourceLines[statement.range().start.line] ?? "";
     const match = line.match(/^(\s*)/);
-    return match ? match[1] : "";
+    return match?.[1] ?? "";
   };
 
   const applyRenderReplacement = (call: SgNode<TSX>, pattern: string): void => {
@@ -112,6 +112,7 @@ const transform: Transform<TSX> = async (root) => {
 
     const element = argList[0]!;
     const container = argList[1]!;
+    const callback = argList[2];
     const statement = call.ancestors().find((ancestor) => ancestor.kind() === "expression_statement");
     if (!statement) return;
 
@@ -130,7 +131,8 @@ const transform: Transform<TSX> = async (root) => {
       renderCall = `${rootName}.render(${elementText})`;
     }
 
-    const replacement = `const ${rootName} = createRoot(${container.text()});\n${indent}${renderCall};`;
+    const callbackCall = callback ? `\n${indent}(${callback.text()})();` : "";
+    const replacement = `const ${rootName} = createRoot(${container.text()});\n${indent}${renderCall};${callbackCall}`;
     edits.push(statement.replace(replacement));
     hasTransformations = true;
     transformMetric.increment({

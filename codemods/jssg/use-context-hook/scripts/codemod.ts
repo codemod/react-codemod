@@ -7,6 +7,10 @@ function metricFile(filename: string): string {
   return filename.startsWith(cwd) ? filename.slice(cwd.length) : filename;
 }
 
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 type NamedUseContextImport = { specifier: SgNode<TSX>; localName: string };
 
 function sourceText(node: SgNode<TSX>): string | null {
@@ -134,7 +138,7 @@ const transform: Transform<TSX> = async (root) => {
         has: {
           field: "function",
           kind: "identifier",
-          regex: `^${localName}$`,
+          regex: `^${escapeRegex(localName)}$`,
         },
       },
     });
