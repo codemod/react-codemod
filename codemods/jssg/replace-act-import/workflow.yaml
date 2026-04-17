@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+
+version: "1"
+
+nodes:
+  - id: apply-transforms
+    name: Apply AST Transformations
+    type: automatic
+    steps:
+      - name: "Migrate act from react-dom/test-utils to react"
+        js-ast-grep:
+          js_file: scripts/codemod.ts
+          language: "tsx"
+          # Test-oriented globs .
+          include:
+            - "**/*.test.ts"
+            - "**/*.test.tsx"
+            - "**/*.spec.ts"
+            - "**/*.spec.tsx"
+            - "**/__tests__/**/*.ts"
+            - "**/__tests__/**/*.tsx"
+            - "**/tests/**/*.ts"
+            - "**/tests/**/*.tsx"
+          exclude:
+            - "**/node_modules/**"
+            - "**/dist/**"
+            - "**/build/**"
+            - "**/.next/**"
+            - "**/out/**"
+            - "**/coverage/**"
+            - "**/.git/**"
+            # JSSG golden outputs (avoid touching when running workflow from package root)
+            - "**/tests/**/expected.ts"
+            - "**/tests/**/expected.tsx"

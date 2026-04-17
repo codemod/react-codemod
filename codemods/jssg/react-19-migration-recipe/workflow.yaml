@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+
+version: "1"
+
+nodes:
+  - id: react-19-migration
+    name: React 19 Migration
+    type: automatic
+    steps:
+      - name: "Replace ReactDOM.render with createRoot"
+        codemod:
+          source: "@react-new/replace-reactdom-render"
+
+      - name: "Replace string refs with callback refs"
+        codemod:
+          source: "@react-new/replace-string-ref"
+
+      - name: "Migrate act from react-dom/test-utils to react"
+        codemod:
+          source: "@react-new/replace-act-import"
+
+      - name: "Replace useFormState with useActionState"
+        codemod:
+          source: "@react-new/replace-use-form-state"
+
+      - name: "Replace useContext with use"
+        codemod:
+          source: "@react-new/use-context-hook"

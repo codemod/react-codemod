@@ -1,0 +1,11 @@
+{
+  "replace-use-form-state-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-react-dom-imports-both-have-hook/input.tsx",
+        "pattern": "named-import"
+      },
+      "count": 1
+    }
+  ]
+}

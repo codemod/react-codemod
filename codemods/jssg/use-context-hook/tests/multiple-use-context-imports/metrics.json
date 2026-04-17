@@ -1,0 +1,18 @@
+{
+  "use-context-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-use-context-imports/input.tsx",
+        "pattern": "useContext"
+      },
+      "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "tests/multiple-use-context-imports/input.tsx",
+        "pattern": "useContext (aliased)"
+      },
+      "count": 1
+    }
+  ]
+}

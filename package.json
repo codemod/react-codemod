@@ -1,25 +1,19 @@
 {
-  "name": "jssg-react-codemods",
+  "name": "react-codemod",
   "version": "0.1.0",
   "private": true,
-  "description": "React codemods built with JSSG (JavaScript ast-grep)",
+  "description": "A collection of codemods to help update React apps",
   "type": "module",
   "scripts": {
-    "test": "pnpm -r test",
-    "test:use-context-hook": "pnpm --filter @react-codemods/use-context-hook test",
-    "test:update-react-imports": "pnpm --filter @react-codemods/update-react-imports test",
-    "test:replace-reactdom-render": "pnpm --filter @react-codemods/replace-reactdom-render test",
-    "test:replace-string-ref": "pnpm --filter @react-codemods/replace-string-ref test",
-    "test:rename-unsafe-lifecycles": "pnpm --filter @react-codemods/rename-unsafe-lifecycles test",
-    "test:error-boundaries": "pnpm --filter @react-codemods/error-boundaries test",
-    "test:replace-act-import": "pnpm --filter @react-codemods/replace-act-import test",
-    "test:replace-use-form-state": "pnpm --filter @react-codemods/replace-use-form-state test",
-    "test:find-dom-node": "pnpm --filter @react-codemods/find-dom-node test",
-    "test:react-proptypes-to-prop-types": "pnpm --filter @react-codemods/react-proptypes-to-prop-types test",
-    "test:pure-render-mixin": "pnpm --filter @react-codemods/pure-render-mixin test",
-    "test:sort-comp": "pnpm --filter @react-codemods/sort-comp test",
-    "test:manual-bind-to-arrow": "pnpm --filter @react-codemods/manual-bind-to-arrow test",
-    "check-types": "pnpm -r check-types"
+    "lint": "node ./scripts/validate-docs.mjs",
+    "test": "pnpm run test:active",
+    "test:active": "pnpm -r --filter \"@react-new/*\" test",
+    "check-types": "pnpm run check-types:active",
+    "check-types:active": "pnpm -r --filter \"@react-new/*\" check-types",
+    "test:legacy": "bash -lc 'cd codemods/legacy && pnpm install --ignore-workspace --frozen-lockfile --force && pnpm run test:ci'",
+    "changeset": "changeset",
+    "version-packages": "changeset version && bash scripts/sync-codemod-versions.sh",
+    "ci": "pnpm run lint && pnpm run test:active && pnpm run check-types:active && pnpm run test:legacy"
   },
   "keywords": [
     "codemod",
@@ -33,6 +27,10 @@
     "url": "https://github.com/codemod/jssg-react-codemods.git"
   },
   "packageManager": "pnpm@9.14.2",
+  "devDependencies": {
+    "@changesets/cli": "^2.30.0",
+    "@types/node": "latest"
+  },
   "dependencies": {
     "@jssg/utils": "^0.0.2"
   }

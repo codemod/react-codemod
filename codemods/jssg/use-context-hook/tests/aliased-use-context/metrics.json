@@ -1,0 +1,11 @@
+{
+  "use-context-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/aliased-use-context/input.tsx",
+        "pattern": "useContext (aliased)"
+      },
+      "count": 1
+    }
+  ]
+}

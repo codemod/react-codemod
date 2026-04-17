@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/replace-string-ref"
+version: "0.1.0"
+description: "Replace string refs with callback refs in React class components"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

@@ -1,0 +1,11 @@
+{
+  "string-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/export-default-class/input.tsx",
+        "refs": "refName"
+      },
+      "count": 1
+    }
+  ]
+}
