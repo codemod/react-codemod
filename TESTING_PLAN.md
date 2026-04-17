@@ -8,6 +8,8 @@ We searched public GitHub repos for the exact code patterns each of our 6 JSSG c
 
 **Key finding:** `useFormState` from `react-dom` has **zero real-world adoption**. No open-source repo imports `useFormState` from `react-dom`. The API was renamed to `useActionState` before it saw meaningful use.
 
+**Additional modern spot-check:** As of 2026-04-17, `calcom/cal.com` redirects to `calcom/cal.diy`. It is a useful React 18/19 TypeScript monorepo target for validating `use-context-hook` and `replace-act-import` on current code.
+
 ---
 
 ## Recommended Test Repos
@@ -19,6 +21,7 @@ We searched public GitHub repos for the exact code patterns each of our 6 JSSG c
 | **[youzan/zent](https://github.com/youzan/zent)** | 2.2k | 17.0.x (dev), ^17 (peer) | `ReactDOM.render` (~398), `react-dom/test-utils` (~17), `useContext` | TypeScript 65% |
 | **[salesforce/design-system-react](https://github.com/salesforce/design-system-react)** | ~1k | ^17.0.2 (dev), >=16.8 (peer) | `ReactDOM.render` (~315), `useContext` | JavaScript |
 | **[atlassian/react-beautiful-dnd](https://github.com/atlassian/react-beautiful-dnd)** | 33k | 16.13.1 (dev), ^16.8.5‖^17‖^18 (peer) | `react-dom/test-utils` (multiple), `ReactDOM.render` | JS + Flow |
+| **[calcom/cal.com](https://github.com/calcom/cal.com)** (redirects to [`calcom/cal.diy`](https://github.com/calcom/cal.diy)) | 41.4k | 18.2.0 in `apps/web`, `^18 || ^19` across workspace packages | `useContext` (~47 raw refs, 30 actual codemod hits), `react-dom/test-utils` (1) | TypeScript |
 
 ### Tier 2 — Single-Pattern Repos (well-known, good signal)
 
@@ -70,8 +73,9 @@ We searched public GitHub repos for the exact code patterns each of our 6 JSSG c
 | **MetaMask/metamask-extension** | ~18 | ★ Very well-known, React 16 |
 | youzan/zent | ~17 | Also has ReactDOM.render |
 | atlassian/react-beautiful-dnd | multiple | Popular DnD library |
+| **calcom/cal.com** | 1 | Modern React 18/19 monorepo, verified on tag `v6.2.0` |
 
-**Recommended test repos:** `MetaMask/metamask-extension` (brand recognition) + `OnsenUI/OnsenUI` (highest count)
+**Recommended test repos:** `MetaMask/metamask-extension` (brand recognition) + `OnsenUI/OnsenUI` (highest count) + `calcom/cal.com` (modern React 18/19 spot-check)
 
 **Legacy counterpart:** `npx react-codemod react/19/replace-act-import`
 
@@ -124,7 +128,9 @@ We searched public GitHub repos for the exact code patterns each of our 6 JSSG c
 
 This pattern is **ubiquitous** — virtually every React application uses `useContext`. Any of the Tier 1 repos will work.
 
-**Recommended test repos:** `youzan/zent` + `salesforce/design-system-react` (already testing other patterns)
+**Additional verified modern repo:** `calcom/cal.com` (redirects to `calcom/cal.diy`) at tag `v6.2.0` yields 30 transformable files with the current local workflow.
+
+**Recommended test repos:** `youzan/zent` + `salesforce/design-system-react` + `calcom/cal.com` (modern React 18/19 monorepo)
 
 **Legacy counterpart:** `npx react-codemod react/19/use-context-hook`
 
@@ -148,12 +154,15 @@ This API was renamed to `useActionState` before it saw meaningful public adoptio
 |------|--------|------------|-----------|------------|------------|--------------|
 | youzan/zent | ✅ ~398 | ✅ ~17 | — | — | ✅ | — |
 | salesforce/design-system-react | ✅ ~315 | — | — | — | ✅ | — |
+| calcom/cal.com (`v6.2.0`) | — | ✅ 1 | — | — | ✅ 30 transformable files | — |
 | MetaMask/metamask-extension | — | ✅ ~18 | — | — | ✅ | — |
 | nylas/nylas-mail | — | — | ✅ ~193 | ✅ ~41 | — | — |
 | azat-co/react-quickly | — | — | ✅ ~155 | ✅ ~120 | — | — |
 | *(synthetic fixtures)* | — | — | — | — | — | ✅ |
 
 **Minimum repos to cover all 5 viable codemods: 3** (zent + MetaMask + nylas-mail)
+
+For modern React 18/19 coverage, `calcom/cal.com` is a strong fourth repo even though it is not required for minimum pattern coverage.
 
 ---
 
@@ -195,3 +204,4 @@ This API was renamed to `useActionState` before it saw meaningful public adoptio
 - Some repos are archived/unmaintained — that's fine for testing, the code patterns are what matter
 - `useFormState` testing is synthetic-only; recommend documenting this proactively for the React team
 - `useContext` is so widespread that any React 16.8+ repo works; no need for a dedicated test repo
+- `calcom/cal.com` redirected to `calcom/cal.diy` on GitHub by 2026-04-17; keep both names in documentation for discoverability

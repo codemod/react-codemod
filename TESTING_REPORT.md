@@ -9,7 +9,7 @@
 | **JSSG codemods** | `@react-new/*` (v0.1.0, published to Codemod Registry; regression fixes pending republish) |
 | **Legacy codemods** | `react/19/*` (jscodeshift, from Codemod Registry) |
 | **CLI** | `codemod@latest` with `--no-interactive` flag |
-| **Test repos** | youzan/zent (React 17, TS), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow) |
+| **Test repos** | youzan/zent (React 17, TS), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`) |
 
 ---
 
@@ -18,13 +18,13 @@
 | Codemod | Verdict | JSSG Files | Legacy Files | Notes |
 |---------|---------|:----------:|:------------:|-------|
 | `replace-reactdom-render` | **Perfect parity** | 4 | 4 | Fixed: now handles `unmountComponentAtNode` + correct indentation |
-| `replace-act-import` | **JSSG wins** | **6** | 1 | JSSG transforms 6× more files |
-| `use-context-hook` | **Perfect parity** | 47 | 47 | Byte-identical diffs |
+| `replace-act-import` | **JSSG wins** | **6** | 1 | JSSG transforms 6× more files on `react-beautiful-dnd`; `cal.com` `v6.2.0` is an additional 1-file parity spot-check |
+| `use-context-hook` | **JSSG wins** | **30** | 29 | `youzan/zent` was byte-identical; `cal.com` adds 2 real call sites and avoids 1 unused-import false positive |
 | `replace-string-ref` | **JSSG wins** | **5** | 0 | Legacy skips `.jsx` files entirely |
 | `replace-use-form-state` | **Perfect parity** | 1 | 1 | Fixed: now moves import from `react-dom` to `react` |
 | `react-proptypes-to-prop-types` | No comparison | 2 | — | No legacy counterpart on registry |
 
-**Bottom line**: 0 regressions, 2 areas where JSSG outperforms, 3 perfect parity, 1 unverifiable.
+**Bottom line**: 0 regressions, 3 areas where JSSG outperforms, 2 perfect parity, 1 unverifiable.
 
 ---
 
@@ -95,13 +95,29 @@ Both codemods produce the **same correct transformation** per file:
 
 But the legacy codemod only picks up **1 of 6 files** (`touch-sensor/click-blocking.spec.js`), while JSSG correctly finds and transforms all 6. The legacy codemod appears to have a file-matching or traversal limitation that causes it to miss files in nested test directories.
 
+#### Additional spot-check: `calcom/cal.com` -> `calcom/cal.diy` (`v6.2.0`, commit `1c193cc`)
+
+As of April 17, 2026, GitHub redirects `calcom/cal.com` to `calcom/cal.diy`. On tag `v6.2.0`, both the local JSSG workflow and the legacy registry codemod transform the same single file:
+
+| Metric | JSSG | Legacy |
+|--------|:----:|:------:|
+| Files transformed | 1 | 1 |
+| Diff comparison | **Byte-identical** | — |
+
+File transformed: `packages/ui/components/form/color-picker/colorpicker.test.tsx`
+
+```diff
+-import { act } from "react-dom/test-utils";
++import { act } from "react";
+```
+
 #### Recommendation
 
 No action needed — JSSG is strictly better here.
 
 ---
 
-### 3. `use-context-hook` — **Perfect Parity**
+### 3. `use-context-hook` — **Perfect Parity on zent; JSSG Outperforms on cal.com**
 
 **Repo**: youzan/zent (`packages/zent/src/`)
 
@@ -124,9 +140,45 @@ Transformation pattern (applied consistently across all 47 files):
 +const value = use(SomeContext);
 ```
 
+#### Additional spot-check: `calcom/cal.com` -> `calcom/cal.diy` (`v6.2.0`, commit `1c193cc`)
+
+For this add-on validation, JSSG was run from the current local workflow in this repo and legacy was run from the published `react/19/use-context-hook` package.
+
+| Metric | JSSG | Legacy |
+|--------|:----:|:------:|
+| Files transformed | **30** | 29 |
+| Insertions | **58** | 55 |
+| Deletions | **58** | 55 |
+| Common-file diff comparison | **28 files, byte-identical** | — |
+
+The overlapping 28 file diffs are byte-identical. The difference comes from three file-targeting decisions:
+
+- JSSG-only: `apps/web/modules/users/components/UserTable/BulkActions/MassAssignAttributes.tsx`
+- JSSG-only: `packages/features/embed/lib/hooks/useEmbedDialogCtx.tsx`
+- Legacy-only: `apps/web/modules/notifications/components/WebPushContext.tsx`
+
+The two JSSG-only files contain real `useContext(...)` call sites:
+
+```diff
+-  const context = useContext(AttributesContext);
++  const context = use(AttributesContext);
+```
+
+```diff
+-  const context = useContext(EmbedDialogContext);
++  const context = use(EmbedDialogContext);
+```
+
+The legacy-only file does **not** contain a `useContext(...)` call; it only had an unused `useContext` import, which legacy rewrote to `use` anyway:
+
+```diff
+-import { createContext, useContext, useEffect, useMemo, useState } from "react";
++import { createContext, use, useEffect, useMemo, useState } from "react";
+```
+
 #### Recommendation
 
-No action needed — JSSG is at full parity.
+No action needed — zent remains byte-identical parity, and cal.com shows a safe modern-repo improvement.
 
 ---
 
@@ -240,6 +292,6 @@ All regressions found during initial testing have been fixed and retested.
 | Codemod | Status |
 |---------|--------|
 | `replace-act-import` | No action needed — JSSG outperforms legacy (6× coverage) |
-| `use-context-hook` | No action needed — perfect byte-identical parity |
+| `use-context-hook` | No action needed — zent is byte-identical and cal.com shows a safe extension (30 files vs 29, with 28 overlapping diffs identical) |
 | `replace-string-ref` | No action needed — JSSG outperforms legacy (handles `.jsx` files) |
 | `react-proptypes-to-prop-types` | No action needed — works correctly; no legacy to compare against |
