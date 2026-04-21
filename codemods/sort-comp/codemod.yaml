@@ -6,6 +6,7 @@ description: "Reorder React component methods to match eslint-plugin-react sort-
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/sort-comp"
 
 targets:
   languages: ["tsx"]

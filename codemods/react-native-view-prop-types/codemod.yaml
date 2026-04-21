@@ -6,6 +6,7 @@ description: "Replace View.propTypes with ViewPropTypes"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/react-native-view-prop-types"
 
 targets:
   languages: ["tsx"]

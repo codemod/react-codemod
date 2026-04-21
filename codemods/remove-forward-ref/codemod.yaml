@@ -6,6 +6,7 @@ description: "Inline forwardRef render functions and move ref into props"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/remove-forward-ref"
 
 targets:
   languages: ["tsx"]

@@ -6,6 +6,7 @@ description: "Replace PureRenderMixin with shouldComponentUpdate using React.add
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/pure-render-mixin"
 
 targets:
   languages: ["tsx"]

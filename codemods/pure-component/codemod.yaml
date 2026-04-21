@@ -6,6 +6,7 @@ description: "Convert simple React classes into pure function components"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/pure-component"
 
 targets:
   languages: ["tsx"]

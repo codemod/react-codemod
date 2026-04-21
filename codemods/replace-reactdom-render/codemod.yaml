@@ -6,6 +6,7 @@ description: "Replace ReactDOM.render with createRoot for React 18"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/replace-reactdom-render"
 
 
 targets:
