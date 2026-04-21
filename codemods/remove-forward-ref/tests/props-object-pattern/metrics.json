@@ -1,0 +1,10 @@
+{
+  "remove-forward-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/props-object-pattern/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

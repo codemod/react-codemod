@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/manual-bind-to-arrow"
+version: "0.1.1"
+description: "Convert this.method = this.method.bind(this) to arrow class property"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

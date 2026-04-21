@@ -1,0 +1,18 @@
+{
+  "name": "@react-new/remove-forward-ref",
+  "version": "0.1.1",
+  "description": "Inline forwardRef render functions and move ref into props",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts --strictness loose",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  },
+  "dependencies": {
+    "@jssg/utils": "^0.0.2"
+  }
+}

@@ -1,60 +1,44 @@
 # Contributing
 
-Thanks for your interest in contributing to react-codemod!
+This repository is a pnpm workspace of JSSG codemods under `codemods/*`.
 
-## Development setup
+## Setup
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Run all tests
-pnpm test
-
-# Type-check all codemods
-pnpm check-types
 ```
 
-## Making changes
+Required local checks before opening a pull request:
 
-1. Create a branch from `main`.
-2. Make your changes and add or update tests.
-3. Run `pnpm test` and `pnpm check-types` to verify everything passes.
-4. Add a changeset (see below).
-5. Open a pull request.
+```bash
+pnpm run test
+pnpm run check-types
+```
 
-## Adding a changeset
+Or run the combined check:
 
-This repo uses [Changesets](https://github.com/changesets/changesets) for versioning and releases. Every PR that changes a codemod must include a changeset.
+```bash
+pnpm run ci
+```
+
+## Adding or updating codemods
+
+- Keep each codemod self-contained under `codemods/<slug>/`.
+- Update the codemod package README when behavior or usage changes.
+- Add or extend snapshot fixtures under the codemod’s `tests/` directory for every behavioral change.
+
+## Versioning and publishing
+
+This repo uses Changesets to version codemod packages.
+
+To prepare a release entry for your change:
 
 ```bash
 pnpm changeset
 ```
 
-Follow the prompts to:
-1. Select the affected codemod(s).
-2. Choose the semver bump type — **patch** for bug fixes, **minor** for new features, **major** for breaking changes.
-3. Write a short summary of the change.
+When release changesets land on `main`, GitHub Actions:
 
-This creates a markdown file in `.changeset/` that should be committed with your PR.
-
-## Release workflow
-
-1. Merge a PR with one or more changesets into `main`.
-2. CI automatically opens a **Version Packages** PR that bumps versions in `package.json` and `codemod.yaml`.
-3. Merge the version PR — git tags are created and the updated codemods are published to the Codemod registry.
-
-## Adding a new codemod
-
-Each codemod lives in its own directory under `codemods/jssg/`:
-
-```
-codemods/jssg/<name>/
-  scripts/codemod.ts   # Codemod logic (jssg / ast-grep)
-  tests/               # Input/expected test fixtures
-  codemod.yaml         # Codemod manifest
-  workflow.yaml        # Execution workflow
-  package.json
-```
-
-Use an existing codemod as a reference when creating a new one.
+1. opens or updates the release PR via Changesets
+2. tags released codemod package versions as `<package-name>@v<version>`
+3. publishes each tagged codemod through `codemod/publish-action@v1`

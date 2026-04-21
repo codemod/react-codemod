@@ -1,0 +1,11 @@
+{
+  "sort-comp-reorders": [
+    {
+      "cardinality": {
+        "file": "tests/sort-comp/input.tsx",
+        "kind": "createClass"
+      },
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "error-boundary-renames": [
+    {
+      "cardinality": {
+        "file": "tests/create-class-component/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

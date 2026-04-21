@@ -1,0 +1,10 @@
+{
+  "pure-render-mixin-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/pure-render-mixin4/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

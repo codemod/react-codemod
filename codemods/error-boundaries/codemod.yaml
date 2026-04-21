@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/error-boundaries"
+version: "0.1.1"
+description: "Rename unstable_handleError to componentDidCatch"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

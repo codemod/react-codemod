@@ -1,0 +1,10 @@
+{
+  "remove-forward-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/function-expression/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-member-to-named",
+        "file": "tests/typescript-react-basic-default-export-jsx-element-react-variable-tsx/input.tsx",
+        "previous": "default"
+      },
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "react-native-view-prop-types-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-replacements/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

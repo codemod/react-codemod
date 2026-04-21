@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/remove-forward-ref"
+version: "0.1.1"
+description: "Inline forwardRef render functions and move ref into props"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "forwardRef"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

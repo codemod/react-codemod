@@ -1,0 +1,15 @@
+{
+  "name": "@react-new/create-element-to-jsx",
+  "version": "0.1.1",
+  "description": "Convert React.createElement calls to JSX",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts && node --test ./scripts/error-tests.mjs ./scripts/differential-tests.mjs",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

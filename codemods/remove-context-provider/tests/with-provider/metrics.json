@@ -1,0 +1,10 @@
+{
+  "remove-context-provider-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/with-provider/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

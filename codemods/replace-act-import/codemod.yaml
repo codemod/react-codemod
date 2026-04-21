@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/replace-act-import"
+version: "0.1.1"
+description: "Migrate act() from react-dom/test-utils to react"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

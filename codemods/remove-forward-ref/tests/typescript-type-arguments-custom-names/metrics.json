@@ -1,0 +1,10 @@
+{
+  "remove-forward-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/typescript-type-arguments-custom-names/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

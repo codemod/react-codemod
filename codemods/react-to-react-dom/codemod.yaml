@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/react-to-react-dom"
+version: "0.1.1"
+description: "Move DOM APIs from react to react-dom"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "ReactDOM"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

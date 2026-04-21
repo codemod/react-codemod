@@ -1,0 +1,10 @@
+{
+  "react-dom-factory-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/react-dom-deconstructed-require-part-two/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

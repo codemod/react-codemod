@@ -1,0 +1,15 @@
+{
+  "name": "@react-new/rename-unsafe-lifecycles",
+  "version": "0.1.1",
+  "description": "Rename deprecated lifecycle methods to UNSAFE_ prefixed versions",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "typescript": "latest",
+    "@types/node": "latest"
+  }
+}

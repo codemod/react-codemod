@@ -1,0 +1,10 @@
+{
+  "react-dom-factory-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/react-dom-basic-case/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}
