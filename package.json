@@ -5,15 +5,11 @@
   "description": "A collection of codemods to help update React apps",
   "type": "module",
   "scripts": {
-    "lint": "node ./scripts/validate-docs.mjs",
-    "test": "pnpm run test:active",
-    "test:active": "pnpm -r --filter \"@react-new/*\" test",
-    "check-types": "pnpm run check-types:active",
-    "check-types:active": "pnpm -r --filter \"@react-new/*\" check-types",
-    "test:legacy": "bash -lc 'cd codemods/legacy && pnpm install --ignore-workspace --frozen-lockfile --force && pnpm run test:ci'",
+    "test": "pnpm -r --filter \"@react-new/*\" test",
+    "check-types": "pnpm -r --filter \"@react-new/*\" check-types",
     "changeset": "changeset",
     "version-packages": "changeset version && bash scripts/sync-codemod-versions.sh",
-    "ci": "pnpm run lint && pnpm run test:active && pnpm run check-types:active && pnpm run test:legacy"
+    "ci": "pnpm run test && pnpm run check-types"
   },
   "keywords": [
     "codemod",

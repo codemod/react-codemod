@@ -10,7 +10,7 @@
 | **Legacy codemods** | `react/19/*` (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms |
 | **CLI** | `codemod@latest` with `--no-interactive` flag |
 | **Test repos** | youzan/zent (React 17, TS), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`) |
-| **Phase 2 import verification** | On 2026-04-20, imported 14 additional JSSG codemods from `align-with-legacy-codemods` and verified them with `pnpm run test:active`, `pnpm run check-types:active`, and `pnpm run ci` on this branch |
+| **Phase 2 import verification** | On 2026-04-20, imported 14 additional JSSG codemods from `align-with-legacy-codemods` and verified them with `pnpm run test`, `pnpm run check-types`, and `pnpm run ci` on this branch |
 
 ---
 
@@ -498,8 +498,8 @@ The following codemods were originally ported to JSSG on `align-with-legacy-code
 
 Post-import verification on this branch:
 
-- `pnpm run test:active` ✅
-- `pnpm run check-types:active` ✅
+- `pnpm run test` ✅
+- `pnpm run check-types` ✅
 - `pnpm run ci` ✅
 
 Interpretation:

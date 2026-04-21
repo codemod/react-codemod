@@ -1,12 +1,12 @@
 # Parity Status
 
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 Status meanings:
 
 - `Certified`: replacement-grade confidence. Tests are green, public test posture is portable, and there are no known logic gaps versus the original jscodeshift codemod. May include safe extensions on edge cases the original did not handle, as long as original behavior remains unbroken.
 - `Fixture-Verified`: JSSG port exists in this branch, package fixture suites are green, and type checks pass. May include differential/error/warning tests, but replacement-grade real-repo parity has not yet been established to the same standard as `Certified`.
-- `Legacy`: available as a jscodeshift codemod under `codemods/legacy/`. Not yet ported to JSSG.
+- `Deferred`: intentionally out of scope for now. Not ported to JSSG yet.
 
 ## JSSG Codemods
 
@@ -33,10 +33,8 @@ Status meanings:
 | `sort-comp` | `sort-comp.js` | `Fixture-Verified` | Imported from `align-with-legacy-codemods` on 2026-04-20. Package fixtures and type checks are green. |
 | `update-react-imports` | `update-react-imports.js` | `Fixture-Verified` | Imported from `align-with-legacy-codemods` on 2026-04-20. 33 fixtures are green. |
 
-## Legacy Codemods
+## Deferred Codemods
 
-These codemods are still legacy-only under [`codemods/legacy/transforms/`](./codemods/legacy/transforms/):
+These codemods are still deferred and do not have a JSSG port in this repo:
 
 - `class`
-
-The legacy snapshot package still contains the original jscodeshift transforms for comparison and evaluation, even when a JSSG port now exists on this branch.

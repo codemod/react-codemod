@@ -1,6 +1,6 @@
 # React Codemods
 
-This repository contains a collection of codemods to help update React apps.
+This repository contains the public JSSG codemods for React migrations and cleanup work.
 
 All codemods are free and open source, with the source code available in this repository.
 
@@ -93,7 +93,7 @@ See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-ty
 
 #### Additional JSSG Codemods
 
-Additional JSSG ports imported from the earlier `align-with-legacy-codemods` branch are also available under [`codemods/jssg/`](./codemods/jssg/):
+The repository also includes JSSG ports of the remaining upstream `react-codemod` transforms, so all upstream codemods are available here except the deferred `class` codemod:
 
 - `create-element-to-jsx`
 - `error-boundaries`
@@ -110,11 +110,7 @@ Additional JSSG ports imported from the earlier `align-with-legacy-codemods` bra
 - `sort-comp`
 - `update-react-imports`
 
-See [PARITY_STATUS.md](./PARITY_STATUS.md) for the current certification/verification status of each port. At this point, only `class` remains legacy-only.
-
-#### Legacy Codemods
-
-Additional jscodeshift-based codemods from the original `react-codemod` project are available under [`codemods/legacy/`](./codemods/legacy/). See [LEGACY.md](./LEGACY.md) for the full catalog.
+See [PARITY_STATUS.md](./PARITY_STATUS.md) for the current certification/verification status of each port. At this point, only `class` remains deferred.
 
 ## Development
 
@@ -135,15 +131,9 @@ Run type checking:
 pnpm run check-types
 ```
 
-Run legacy codemod tests:
-
-```bash
-pnpm run test:legacy
-```
-
 ## Support and Contributing
 
-If you want to contribute, you're welcome to submit a pull request.
+If you want to contribute, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
