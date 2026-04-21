@@ -17,9 +17,13 @@ function extractSources(yamlText) {
   return [...yamlText.matchAll(/source:\s*"([^"]+)"/g)].map((match) => match[1]);
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test("codemod metadata stays in sync with package.json", () => {
   assert.match(codemodYaml, new RegExp(`name: "${packageJson.name.replaceAll("/", "\\/")}"`));
-  assert.match(codemodYaml, new RegExp(`version: "${packageJson.version}"`));
+  assert.match(codemodYaml, new RegExp(`version: "${escapeRegExp(packageJson.version)}"`));
   assert.match(codemodYaml, /workflow: "workflow\.yaml"/);
 });
 
