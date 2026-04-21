@@ -29,79 +29,60 @@
 
 ## Speed Benchmarks
 
-These timing numbers are **single-run wall-clock** measurements on this machine. They exclude repo copy/setup time and measure only the codemod command itself on the same target slices used for behavior evaluation. JSSG was run via the local package `codemod jssg run`. Legacy timings were run with local `jscodeshift`, using:
+These timing numbers are **single-run wall-clock** measurements on this machine. They exclude repo copy/setup time and measure only the codemod command itself on the same target slices used for behavior evaluation.
+
+For JSSG, the timings below now use the local `#2106` CLI implementation from `fix/fix-performance-jssg` at commit `8fafc226`, executed via the local debug binary:
+
+- `/Users/mohabsameh/Downloads/codemod-fix-performance-jssg/target/debug/codemod`
+
+For legacy, the timings use local `jscodeshift`, with:
 
 - official upstream `reactjs/react-codemod` transform files for the current React 19 codemods and for `react-proptypes-to-prop-types`
 - the local legacy snapshot under `codemods/legacy/transforms` for the imported codemods, because that is the implementation used in our parity work
 
-Overall result on this machine: **JSSG was faster on 11 of 21 benchmarked codemod/repo pairs; legacy was faster on 10 of 21**. The raw time alone is not enough to judge quality, so the table also includes the changed-file counts for context.
+Overall result with the `#2106` JSSG binary on this machine: **JSSG was faster on 18 of 21 benchmarked codemod/repo pairs; legacy was faster on 3 of 21**.
+
+I also sanity-checked the two suspect cases against local source builds of:
+
+- `codemod-cli@1.7.10` (`88e4544c`)
+- local `main` (`9d3d2616`)
+- `fix/fix-performance-jssg` (`8fafc226`)
+
+On those apples-to-apples local-binary runs, `#2106` was faster than both `1.7.10` and `main` for:
+
+- `replace-string-ref__react-quickly`
+- `use-context-hook__zent`
 
 ### Speed — Current Codemods
 
 | Codemod | Repo Slice | Input Files | Changed Files (J/L) | JSSG | jscodeshift | Faster | Notes |
 |---------|------------|:-----------:|:-------------------:|-----:|------------:|:------:|-------|
-| `replace-reactdom-render` | `zent` `packages/zent/src` | 690 | 4 / 2 | 7.020s | 2.847s | Legacy | Legacy was faster but also errored on a TS file and transformed fewer files |
-| `replace-reactdom-render` | `salesforce` render slice | 314 | 1 / 6 | 1.952s | 1.534s | Legacy | JSSG intentionally skips unsafe return-value helper patterns here |
-| `replace-act-import` | `react-beautiful-dnd` `test/` | 300 | 6 / 2 | 1.349s | 1.880s | JSSG | Legacy was slower and transformed fewer files due parser failures |
-| `replace-act-import` | `cal.diy` 1-file spot-check | 1 | 1 / 1 | 1.031s | 0.433s | Legacy | Tiny slice; startup cost dominates |
-| `replace-act-import` | `MetaMask` matched tests | 18 | 18 / 18 | 1.181s | 1.216s | JSSG | Near tie |
-| `use-context-hook` | `zent` `packages/zent/src` | 690 | 47 / 47 | 1.421s | 3.765s | JSSG | Strongest large-slice speed win with equal transformed-file count |
-| `use-context-hook` | `cal.diy` matched source slice | 31 | 30 / 29 | 1.351s | 1.464s | JSSG | JSSG also transforms one additional real file |
-| `use-context-hook` | `salesforce` matched source slice | 6 | 6 / 6 | 1.444s | 0.866s | Legacy | Tiny slice; startup cost dominates |
-| `replace-string-ref` | `react-quickly` full repo | 650 | 5 / 0 | 6.201s | 55.541s | JSSG | Legacy parser failures plus zero transformed files; JSSG is dramatically faster in practice |
-| `react-proptypes-to-prop-types` | `react-quickly` authored slice | 5 | 5 / 2 | 1.117s | 0.840s | Legacy | Legacy is faster on the tiny slice but errors on 3 of 5 authored files |
-| `react-proptypes-to-prop-types` | `nylas-mail` `.jsx` slice | 135 | 135 / 109 | 1.130s | 1.606s | JSSG | JSSG is faster and handles 26 more real files than official legacy |
+| `replace-reactdom-render` | `zent` `packages/zent/src` | 690 | 4 / 2 | 7.330s | 2.847s | Legacy | Legacy was faster but also errored on a TS file and transformed fewer files |
+| `replace-reactdom-render` | `salesforce` render slice | 314 | 1 / 6 | 1.270s | 1.534s | JSSG | JSSG intentionally skips unsafe return-value helper patterns here |
+| `replace-act-import` | `react-beautiful-dnd` `test/` | 300 | 6 / 2 | 1.686s | 1.880s | JSSG | Legacy was slower and transformed fewer files due parser failures |
+| `replace-act-import` | `cal.diy` 1-file spot-check | 1 | 1 / 1 | 0.496s | 0.433s | Legacy | Tiny slice; startup cost dominates |
+| `replace-act-import` | `MetaMask` matched tests | 18 | 18 / 18 | 0.561s | 1.216s | JSSG | Strong JSSG speed win at equal transformed-file count |
+| `use-context-hook` | `zent` `packages/zent/src` | 690 | 47 / 47 | 1.520s | 3.765s | JSSG | Large-slice JSSG win with equal transformed-file count |
+| `use-context-hook` | `cal.diy` matched source slice | 31 | 30 / 29 | 0.568s | 1.464s | JSSG | JSSG also transforms one additional real file |
+| `use-context-hook` | `salesforce` matched source slice | 6 | 6 / 6 | 0.542s | 0.866s | JSSG | Even on the tiny slice, `#2106` is now faster |
+| `replace-string-ref` | `react-quickly` full repo | 650 | 5 / 0 | 23.536s | 55.541s | JSSG | Still much faster than legacy in practice; `#2106` is also faster than local `1.7.10` and local `main` on this case |
+| `react-proptypes-to-prop-types` | `react-quickly` authored slice | 5 | 5 / 2 | 0.637s | 0.840s | JSSG | JSSG is now faster here and still handles all 5 authored files |
+| `react-proptypes-to-prop-types` | `nylas-mail` `.jsx` slice | 135 | 135 / 109 | 0.931s | 1.606s | JSSG | JSSG is faster and handles 26 more real files than official legacy |
 
 ### Speed — Imported Codemods
 
 | Codemod | Repo Slice | Input Files | Changed Files (J/L) | JSSG | jscodeshift | Faster | Notes |
 |---------|------------|:-----------:|:-------------------:|-----:|------------:|:------:|-------|
-| `create-element-to-jsx` | `react-quickly` source slice | 18 | 1 / 1 | 1.028s | 1.031s | JSSG | Essentially a tie |
-| `manual-bind-to-arrow` | `react-quickly` bind slice | 13 | 13 / 13 | 1.027s | 0.858s | Legacy | Small but real legacy speed edge on this slice |
-| `find-dom-node` | `react-quickly` spare-parts slice | 15 | 0 / 0 | 1.659s | 4.054s | JSSG | No-op scan; JSSG is much faster |
-| `error-boundaries` | `DataTurks` exact-source file | 1 | 1 / 1 | 1.006s | 0.522s | Legacy | 1-file slice; startup dominates |
-| `react-dom-to-react-dom-factories` | `react-quickly` jQuery Mobile example | 1 | 1 / 1 | 1.542s | 0.509s | Legacy | 1-file slice; startup dominates |
-| `rename-unsafe-lifecycles` | `nylas-mail` app source slice | 45 | 45 / 45 | 0.975s | 1.212s | JSSG | Clean JSSG speed win at equal file count |
-| `remove-forward-ref` | `cal.diy` matched source slice | 7 | 4 / 4 | 0.949s | 0.809s | Legacy | Small legacy edge on this slice |
-| `remove-context-provider` | `cal.diy` matched source slice | 24 | 22 / 22 | 0.950s | 1.074s | JSSG | Small JSSG edge at equal file count |
-| `react-native-view-prop-types` | `react-native-snap-carousel` source slice | 4 | 4 / 4 | 1.405s | 0.683s | Legacy | Legacy is faster on 4 files, but JSSG is safer on the real repo because it avoids duplicate-import invalid output |
-| `update-react-imports` | `zent` TS/TSX slice | 305 | 4 / 1 | 1.067s | 1.437s | JSSG | Legacy is slower and transforms fewer files because of parser limitations |
-
-### Speed — Preview CLI (`feature/workflow-tui-rewrite`)
-
-On 2026-04-21, I reran the **JSSG side only** of the same benchmark matrix using the local preview CLI from `/Users/mohabsameh/Downloads/codemod` on branch `feature/workflow-tui-rewrite` at commit `f6080826`.
-
-Important caveat: this comparison uses the locally built `target/debug/codemod` binary from that branch, with compile time excluded. That makes it useful for directional comparison against the current CLI, but not a perfect release-vs-release apples-to-apples measurement.
-
-Headline result:
-
-- Preview CLI was faster on **18 of 21** JSSG benchmark cases
-- Preview CLI was slower on **3 of 21** cases
-
-Largest preview CLI improvements vs current CLI JSSG baseline:
-
-| Codemod | Repo Slice | Current CLI | Preview CLI | Delta | Ratio |
-|---------|------------|------------:|------------:|------:|------:|
-| `replace-reactdom-render` | `zent` `packages/zent/src` | 7.020s | 5.452s | -1.569s | 0.78× |
-| `react-dom-to-react-dom-factories` | `react-quickly` example app | 1.542s | 0.505s | -1.036s | 0.33× |
-| `react-native-view-prop-types` | `react-native-snap-carousel` | 1.405s | 0.554s | -0.851s | 0.39× |
-| `use-context-hook` | `salesforce` 6-file slice | 1.444s | 0.720s | -0.723s | 0.50× |
-| `react-proptypes-to-prop-types` | `react-quickly` authored slice | 1.117s | 0.481s | -0.636s | 0.43× |
-| `replace-act-import` | `MetaMask` matched tests | 1.181s | 0.579s | -0.602s | 0.49× |
-
-Largest preview CLI regressions vs current CLI JSSG baseline:
-
-| Codemod | Repo Slice | Current CLI | Preview CLI | Delta | Ratio |
-|---------|------------|------------:|------------:|------:|------:|
-| `replace-string-ref` | full `react-quickly` repo | 6.201s | 28.901s | +22.701s | 4.66× |
-| `use-context-hook` | `zent` `packages/zent/src` | 1.421s | 3.045s | +1.624s | 2.14× |
-| `replace-act-import` | `react-beautiful-dnd` `test/` | 1.349s | 1.950s | +0.601s | 1.45× |
-
-Interpretation:
-
-- The preview CLI appears to reduce startup/engine overhead on many small and medium slices.
-- The biggest regressions show up on larger full-repo or large-slice JSSG runs, especially `replace-string-ref__react-quickly` and `use-context-hook__zent`.
-- Because this was measured with a local debug build of the preview branch, the absolute numbers should be treated as directional. Still, the relative pattern is useful: the preview CLI is likely improved for many short-lived runs, but there may be a regression in one or more hot paths that matters on larger JSSG workloads.
+| `create-element-to-jsx` | `react-quickly` source slice | 18 | 1 / 1 | 0.746s | 1.031s | JSSG | Clear JSSG win |
+| `manual-bind-to-arrow` | `react-quickly` bind slice | 13 | 13 / 13 | 0.535s | 0.858s | JSSG | `#2106` flips this row from legacy-faster to JSSG-faster |
+| `find-dom-node` | `react-quickly` spare-parts slice | 15 | 0 / 0 | 1.282s | 4.054s | JSSG | No-op scan; JSSG is much faster |
+| `error-boundaries` | `DataTurks` exact-source file | 1 | 1 / 1 | 0.465s | 0.522s | JSSG | Tiny slice, but `#2106` still edges legacy |
+| `react-dom-to-react-dom-factories` | `react-quickly` jQuery Mobile example | 1 | 1 / 1 | 0.536s | 0.509s | Legacy | One of only three legacy-faster rows |
+| `rename-unsafe-lifecycles` | `nylas-mail` app source slice | 45 | 45 / 45 | 0.738s | 1.212s | JSSG | Clean JSSG speed win at equal file count |
+| `remove-forward-ref` | `cal.diy` matched source slice | 7 | 4 / 4 | 0.543s | 0.809s | JSSG | `#2106` flips this row from legacy-faster to JSSG-faster |
+| `remove-context-provider` | `cal.diy` matched source slice | 24 | 22 / 22 | 0.497s | 1.074s | JSSG | Strong JSSG win |
+| `react-native-view-prop-types` | `react-native-snap-carousel` source slice | 4 | 4 / 4 | 0.555s | 0.683s | JSSG | `#2106` flips this row from legacy-faster to JSSG-faster; JSSG is also safer on the real repo because it avoids duplicate-import invalid output |
+| `update-react-imports` | `zent` TS/TSX slice | 305 | 4 / 1 | 0.823s | 1.437s | JSSG | Legacy is slower and transforms fewer files because of parser limitations |
 
 ### Imported Codemods — Fixture Verification Summary
 
