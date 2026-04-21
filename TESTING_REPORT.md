@@ -504,7 +504,7 @@ Post-import verification on this branch:
 
 Interpretation:
 
-- The branch now carries 20 active JSSG codemods under `codemods/jssg/`.
+- The branch now carries 20 active JSSG codemods under `codemods/`.
 - The imported 14 codemods are fixture-verified, not yet real-repo certified.
 - `class` is the only codemod still legacy-only.
 

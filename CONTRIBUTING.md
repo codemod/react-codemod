@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is a pnpm workspace of JSSG codemods under `codemods/jssg/*`.
+This repository is a pnpm workspace of JSSG codemods under `codemods/*`.
 
 ## Setup
 
@@ -23,7 +23,7 @@ pnpm run ci
 
 ## Adding or updating codemods
 
-- Keep each codemod self-contained under `codemods/jssg/<slug>/`.
+- Keep each codemod self-contained under `codemods/<slug>/`.
 - Update the codemod package README when behavior or usage changes.
 - Add or extend snapshot fixtures under the codemod’s `tests/` directory for every behavioral change.
 
@@ -42,9 +42,3 @@ When release changesets land on `main`, GitHub Actions:
 1. opens or updates the release PR via Changesets
 2. tags released codemod package versions as `<package-name>@v<version>`
 3. publishes each tagged codemod through `codemod/publish-action@v1`
-
-## Scope notes
-
-- The repo ships JSSG codemods only.
-- Legacy jscodeshift parity comparisons live in the testing documents, not in shipped tooling.
-- The upstream `class` codemod is still deferred and intentionally not part of the public package set yet.

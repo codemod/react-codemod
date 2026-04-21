@@ -6,8 +6,6 @@ All codemods are free and open source, with the source code available in this re
 
 ## Usage
 
-We recommend using the [`codemod`](https://go.codemod.com/github) command for running codemods.
-
 ```bash
 npx codemod <codemod-name> --target <path>
 ```
@@ -15,7 +13,7 @@ npx codemod <codemod-name> --target <path>
 - `<codemod-name>` — name of the codemod (see available codemods below)
 - `<path>` — files or directory to transform
 
-Check [codemod docs](https://go.codemod.com/cli-docs) for the full list of available commands.
+Check [Codemod docs](https://go.codemod.com/cli-docs) for the full list of available commands.
 
 ## Available Codemods
 
@@ -29,7 +27,7 @@ Runs all React 19 migration codemods in sequence.
 npx codemod @react-new/react-19-migration-recipe --target <path>
 ```
 
-See [`react-19-migration-recipe`](./codemods/jssg/react-19-migration-recipe/) for details.
+See [`react-19-migration-recipe`](./codemods/react-19-migration-recipe/) for details.
 
 #### `use-context-hook`
 
@@ -39,7 +37,7 @@ Replaces usages of `React.useContext(...)` with `React.use(...)`.
 npx codemod @react-new/use-context-hook --target <path>
 ```
 
-See [`use-context-hook`](./codemods/jssg/use-context-hook/) for details.
+See [`use-context-hook`](./codemods/use-context-hook/) for details.
 
 #### `replace-act-import`
 
@@ -49,7 +47,7 @@ Updates `act` import path from `react-dom/test-utils` to `react`.
 npx codemod @react-new/replace-act-import --target <path>
 ```
 
-See [`replace-act-import`](./codemods/jssg/replace-act-import/) for details.
+See [`replace-act-import`](./codemods/replace-act-import/) for details.
 
 #### `replace-string-ref`
 
@@ -59,7 +57,7 @@ Replaces deprecated string refs with callback refs.
 npx codemod @react-new/replace-string-ref --target <path>
 ```
 
-See [`replace-string-ref`](./codemods/jssg/replace-string-ref/) for details.
+See [`replace-string-ref`](./codemods/replace-string-ref/) for details.
 
 #### `replace-use-form-state`
 
@@ -69,7 +67,7 @@ Replaces usages of `useFormState()` with `useActionState()`.
 npx codemod @react-new/replace-use-form-state --target <path>
 ```
 
-See [`replace-use-form-state`](./codemods/jssg/replace-use-form-state/) for details.
+See [`replace-use-form-state`](./codemods/replace-use-form-state/) for details.
 
 #### `replace-reactdom-render`
 
@@ -79,7 +77,7 @@ Replaces usages of `ReactDOM.render()` with `createRoot(node).render()`.
 npx codemod @react-new/replace-reactdom-render --target <path>
 ```
 
-See [`replace-reactdom-render`](./codemods/jssg/replace-reactdom-render/) for details.
+See [`replace-reactdom-render`](./codemods/replace-reactdom-render/) for details.
 
 #### `react-proptypes-to-prop-types`
 
@@ -89,11 +87,9 @@ Replaces `React.PropTypes` references with the `prop-types` package and adds the
 npx codemod @react-new/react-proptypes-to-prop-types --target <path>
 ```
 
-See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) for details.
+See [`react-proptypes-to-prop-types`](./codemods/react-proptypes-to-prop-types/) for details.
 
-#### Additional JSSG Codemods
-
-The repository also includes JSSG ports of the remaining upstream `react-codemod` transforms, so all upstream codemods are available here except the deferred `class` codemod:
+#### Additional useful React codemods
 
 - `create-element-to-jsx`
 - `error-boundaries`
@@ -109,8 +105,6 @@ The repository also includes JSSG ports of the remaining upstream `react-codemod
 - `rename-unsafe-lifecycles`
 - `sort-comp`
 - `update-react-imports`
-
-See [PARITY_STATUS.md](./PARITY_STATUS.md) for the current certification/verification status of each port. At this point, only `class` remains deferred.
 
 ## Development
 
@@ -134,7 +128,3 @@ pnpm run check-types
 ## Support and Contributing
 
 If you want to contribute, see [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-## License
-
-react-codemod is [MIT licensed](./LICENSE).
