@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "convert-to-namespace",
+        "file": "tests/default-and-multiple-specifiers-import-react-variable/input.tsx",
+        "previous": "default"
+      },
+      "count": 1
+    }
+  ]
+}

@@ -91,6 +91,27 @@ npx codemod @react-new/react-proptypes-to-prop-types --target <path>
 
 See [`react-proptypes-to-prop-types`](./codemods/jssg/react-proptypes-to-prop-types/) for details.
 
+#### Additional JSSG Codemods
+
+Additional JSSG ports imported from the earlier `align-with-legacy-codemods` branch are also available under [`codemods/jssg/`](./codemods/jssg/):
+
+- `create-element-to-jsx`
+- `error-boundaries`
+- `find-dom-node`
+- `manual-bind-to-arrow`
+- `pure-component`
+- `pure-render-mixin`
+- `react-dom-to-react-dom-factories`
+- `react-native-view-prop-types`
+- `react-to-react-dom`
+- `remove-context-provider`
+- `remove-forward-ref`
+- `rename-unsafe-lifecycles`
+- `sort-comp`
+- `update-react-imports`
+
+See [PARITY_STATUS.md](./PARITY_STATUS.md) for the current certification/verification status of each port. At this point, only `class` remains legacy-only.
+
 #### Legacy Codemods
 
 Additional jscodeshift-based codemods from the original `react-codemod` project are available under [`codemods/legacy/`](./codemods/legacy/). See [LEGACY.md](./LEGACY.md) for the full catalog.

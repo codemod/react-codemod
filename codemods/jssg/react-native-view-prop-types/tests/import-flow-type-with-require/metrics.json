@@ -1,0 +1,10 @@
+{
+  "react-native-view-prop-types-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/import-flow-type-with-require/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

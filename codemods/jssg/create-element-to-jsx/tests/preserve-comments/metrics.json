@@ -1,0 +1,10 @@
+{
+  "create-element-to-jsx-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/preserve-comments/input.tsx"
+      },
+      "count": 8
+    }
+  ]
+}

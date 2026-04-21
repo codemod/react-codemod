@@ -1,0 +1,10 @@
+{
+  "remove-forward-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/typescript-unsupported-type-arguments-union/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

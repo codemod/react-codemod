@@ -1,0 +1,10 @@
+{
+  "create-element-to-jsx-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/member-expression-as-prop/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

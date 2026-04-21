@@ -1,0 +1,12 @@
+{
+  "react-to-react-dom-migrations": [
+    {
+      "cardinality": {
+        "domMembers": "2",
+        "file": "tests/import-with-existing-react-dom/input.tsx",
+        "serverMembers": "0"
+      },
+      "count": 1
+    }
+  ]
+}

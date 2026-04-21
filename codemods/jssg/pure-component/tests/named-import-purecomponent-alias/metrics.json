@@ -1,0 +1,10 @@
+{
+  "pure-component-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/named-import-purecomponent-alias/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

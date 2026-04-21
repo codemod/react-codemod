@@ -1,0 +1,10 @@
+{
+  "create-element-to-jsx-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/no-props-arg/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

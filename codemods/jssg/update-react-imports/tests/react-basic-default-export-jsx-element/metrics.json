@@ -1,0 +1,12 @@
+{
+  "react-import-updates": [
+    {
+      "cardinality": {
+        "action": "remove-react-import",
+        "file": "tests/react-basic-default-export-jsx-element/input.tsx",
+        "previous": "default"
+      },
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+
+version: "1"
+
+params:
+  schema:
+    destructureNamespaceImports:
+      name: "Destructure Namespace Imports"
+      description: "Allow namespace React imports to be rewritten to named imports when it is safe."
+      type: boolean
+      default: false
+
+nodes:
+  - id: apply-transforms
+    name: Apply AST Transformations
+    type: automatic
+    steps:
+      - name: "Scan tsx files and apply fixes"
+        js-ast-grep:
+          js_file: scripts/codemod.ts
+          language: "tsx"

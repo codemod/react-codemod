@@ -1,0 +1,10 @@
+{
+  "create-element-to-jsx-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/no-react-valid-explicit-require/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

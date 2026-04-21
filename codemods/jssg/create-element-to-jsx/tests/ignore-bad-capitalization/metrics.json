@@ -1,0 +1,10 @@
+{
+  "create-element-to-jsx-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/ignore-bad-capitalization/input.tsx"
+      },
+      "count": 5
+    }
+  ]
+}

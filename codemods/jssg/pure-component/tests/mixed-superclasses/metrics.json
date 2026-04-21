@@ -1,0 +1,10 @@
+{
+  "pure-component-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/mixed-superclasses/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

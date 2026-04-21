@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/update-react-imports"
+version: "0.1.0"
+description: "Remove unused React default import and convert to named imports"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

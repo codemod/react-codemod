@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/remove-context-provider"
+version: "0.1.0"
+description: "Replace Context.Provider with Context in JSX"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "Context"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

@@ -1,0 +1,19 @@
+schema_version: "1.0"
+
+name: "@react-new/react-native-view-prop-types"
+version: "0.1.0"
+description: "Replace View.propTypes with ViewPropTypes"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React Native", "View"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []
