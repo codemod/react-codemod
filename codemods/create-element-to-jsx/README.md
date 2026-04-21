@@ -7,10 +7,3 @@ Convert `React.createElement(...)` calls to JSX.
 ```bash
 npx codemod @react-new/create-element-to-jsx --target <path>
 ```
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

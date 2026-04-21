@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "@react-new/remove-context-provider"
-version: "0.1.0"
+version: "0.1.1"
 description: "Replace Context.Provider with Context in JSX"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

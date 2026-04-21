@@ -7,10 +7,3 @@ Transform `React.useContext()` and `useContext()` calls into `use()`.
 ```bash
 npx codemod @react-new/use-context-hook --target <path>
 ```
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

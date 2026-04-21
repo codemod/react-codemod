@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "@react-new/pure-render-mixin"
-version: "0.1.0"
+version: "0.1.1"
 description: "Replace PureRenderMixin with shouldComponentUpdate using React.addons.shallowCompare"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

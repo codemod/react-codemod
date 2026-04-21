@@ -1,6 +1,6 @@
 {
   "name": "@react-new/replace-act-import",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Migrate act() from react-dom/test-utils to react",
   "type": "module",
   "scripts": {

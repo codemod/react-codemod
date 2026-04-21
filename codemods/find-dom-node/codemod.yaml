@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "@react-new/find-dom-node"
-version: "0.1.0"
+version: "0.1.1"
 description: "Replace getDOMNode() with React.findDOMNode()"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "@react-new/replace-use-form-state"
-version: "0.1.0"
+version: "0.1.1"
 description: "Rename useFormState to useActionState in react-dom imports and usages"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

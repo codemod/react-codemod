@@ -7,10 +7,3 @@ Replace `Context.Provider` JSX tags with `Context`.
 ```bash
 npx codemod @react-new/remove-context-provider --target <path>
 ```
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

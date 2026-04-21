@@ -7,10 +7,3 @@ Rename deprecated React lifecycle names to their `UNSAFE_` equivalents in class 
 ```bash
 npx codemod @react-new/rename-unsafe-lifecycles --target <path>
 ```
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

@@ -11,10 +11,3 @@ npx codemod @react-new/update-react-imports --target <path>
 ## Options
 
 - `destructureNamespaceImports`: allow namespace imports such as `import * as React` to be destructured into named imports when it is safe to do so.
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

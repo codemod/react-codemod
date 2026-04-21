@@ -9,10 +9,3 @@ npx codemod @react-new/react-proptypes-to-prop-types --target <path>
 ```
 
 To override the `prop-types` module specifier, pass `--param module-name=<value>`.
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

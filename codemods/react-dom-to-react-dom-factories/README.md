@@ -7,10 +7,3 @@ Replace `React.DOM.*(...)` and `DOM.*(...)` factory calls with `createElement(..
 ```bash
 npx codemod @react-new/react-dom-to-react-dom-factories --target <path>
 ```
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

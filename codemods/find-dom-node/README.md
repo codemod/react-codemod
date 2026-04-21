@@ -11,10 +11,3 @@ npx codemod @react-new/find-dom-node --target <path>
 ## Options
 
 - `explicit-require`: when `false`, run even if no React import/require is present. Default: `true`.
-
-## Development
-
-```bash
-pnpm test
-pnpm check-types
-```

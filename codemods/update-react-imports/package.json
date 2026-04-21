@@ -1,6 +1,6 @@
 {
   "name": "@react-new/update-react-imports",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Remove unused React default import and convert to named imports",
   "type": "module",
   "scripts": {

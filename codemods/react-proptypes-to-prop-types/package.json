@@ -1,6 +1,6 @@
 {
   "name": "@react-new/react-proptypes-to-prop-types",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Replace React.PropTypes with prop-types package",
   "type": "module",
   "scripts": {

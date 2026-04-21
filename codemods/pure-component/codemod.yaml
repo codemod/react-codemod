@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "@react-new/pure-component"
-version: "0.1.0"
+version: "0.1.1"
 description: "Convert simple React classes into pure function components"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

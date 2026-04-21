@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "@react-new/sort-comp"
-version: "0.1.0"
+version: "0.1.1"
 description: "Reorder React component methods to match eslint-plugin-react sort-comp rule"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
