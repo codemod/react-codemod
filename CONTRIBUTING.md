@@ -37,7 +37,7 @@ To prepare a release entry for your change:
 pnpm changeset
 ```
 
-When release changesets land on `main`, GitHub Actions:
+When release changesets land on `main`, GitHub Actions waits for the `CI` workflow to pass and then:
 
 1. opens or updates the release PR via Changesets
 2. tags released codemod package versions as `<package-name>@v<version>`

@@ -1,11 +1,13 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
 
 permissions:
   id-token: write
@@ -15,14 +17,24 @@ permissions:
 jobs:
   release:
     name: Release
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     outputs:
       published: ${{ steps.changesets.outputs.published }}
       changed_dirs: ${{ steps.tag.outputs.changed_dirs }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.2
 
       - uses: actions/setup-node@v4
         with:
@@ -42,20 +54,25 @@ jobs:
       - name: Tag released versions
         if: steps.changesets.outputs.hasChangesets == 'false'
         id: tag
-        run: bash scripts/tag-and-publish.sh
+        run: node scripts/tag-and-publish.mjs
 
   publish:
     name: Publish ${{ matrix.dir }}
     needs: release
-    if: needs.release.outputs.changed_dirs != '[]' && needs.release.outputs.changed_dirs != ''
+    if: needs.release.result == 'success' && needs.release.outputs.changed_dirs != '[]' && needs.release.outputs.changed_dirs != ''
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         dir: ${{ fromJson(needs.release.outputs.changed_dirs) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.2
 
       - uses: actions/setup-node@v4
         with:

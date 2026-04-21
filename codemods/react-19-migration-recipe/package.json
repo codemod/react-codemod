@@ -3,6 +3,10 @@
   "version": "0.1.1",
   "description": "Run all React 19 migration codemods in sequence",
   "type": "module",
+  "scripts": {
+    "test": "node --test ./scripts/metadata-tests.mjs",
+    "check-types": "node --check ./scripts/metadata-tests.mjs"
+  },
   "private": true,
   "license": "MIT"
 }
