@@ -6,6 +6,7 @@ description: "Run all React 19 migration codemods in sequence"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/react-19-migration-recipe"
 
 targets:
   languages: ["tsx"]

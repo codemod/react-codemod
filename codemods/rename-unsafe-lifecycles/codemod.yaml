@@ -6,6 +6,7 @@ description: "Rename deprecated lifecycle methods to UNSAFE_ prefixed versions"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/rename-unsafe-lifecycles"
 
 
 targets:

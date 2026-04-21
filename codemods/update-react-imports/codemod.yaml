@@ -6,6 +6,7 @@ description: "Remove unused React default import and convert to named imports"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/update-react-imports"
 
 
 targets:

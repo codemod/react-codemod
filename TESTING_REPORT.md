@@ -6,7 +6,7 @@
 
 | Item | Detail |
 |------|--------|
-| **JSSG codemods** | `@react-new/*` (v0.1.0, published to Codemod Registry; regression fixes pending republish) |
+| **JSSG codemods** | `@react-new/*` (v0.1.1, published to Codemod Registry) |
 | **Legacy codemods** | `react/19/*` (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms |
 | **CLI** | `codemod@latest` with `--no-interactive` flag |
 | **Test repos** | youzan/zent (React 17, TS), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`) |
@@ -29,60 +29,60 @@
 
 ## Speed Benchmarks
 
-These timing numbers are **single-run wall-clock** measurements on this machine. They exclude repo copy/setup time and measure only the codemod command itself on the same target slices used for behavior evaluation.
+I rewrote the performance section to remove the mixed "released CLI vs local crate build" methodology.
 
-For JSSG, the timings below now use the local `#2106` CLI implementation from `fix/fix-performance-jssg` at commit `8fafc226`, executed via the local debug binary:
+These timings now use:
 
-- `/Users/mohabsameh/Downloads/codemod-fix-performance-jssg/target/debug/codemod`
+- **Current JSSG path**: `pnpm dlx codemod@latest run @react-new/...`
+- **Current published legacy path**: `pnpm dlx codemod@latest run react/19/...`
+- **Unpublished legacy path**: `pnpm dlx jscodeshift` with upstream `reactjs/react-codemod` transforms from `/Users/mohabsameh/Downloads/react-codemod` at commit `5207d594fad6f8b39c51fd7edd2bcb51047dc872`
 
-For legacy, the timings use local `jscodeshift`, with:
+Important methodology notes:
 
-- official upstream `reactjs/react-codemod` transform files for the current React 19 codemods and for `react-proptypes-to-prop-types`
-- the local legacy snapshot under `codemods/legacy/transforms` for the imported codemods, because that is the implementation used in our parity work
+- These are **single-run wall-clock** measurements on this machine after warming the `pnpm dlx` caches.
+- I benchmarked against a temporary corpus built from each codemod package's checked-in `tests/*/input.*` fixtures.
+- Fixture directories containing `test.config.json` were excluded from the timing corpus because they require per-case custom options not representable in a single default CLI invocation.
+- `replace-act-import` fixture inputs were renamed to `*.test.tsx` inside the temporary corpus so the published workflow globs exercised the codemod as shipped.
+- The React 19 recipe benchmark uses the union of fixture inputs from its five published constituent codemods: `replace-reactdom-render`, `replace-string-ref`, `replace-act-import`, `replace-use-form-state`, and `use-context-hook`.
 
-Overall result with the `#2106` JSSG binary on this machine: **JSSG was faster on 18 of 21 benchmarked codemod/repo pairs; legacy was faster on 3 of 21**.
+Overall result with the current released CLI (`codemod@latest`, currently `1.7.16` on this machine):
 
-I also sanity-checked the two suspect cases against local source builds of:
+- **Published-vs-published CLI rows**: JSSG faster on **7 of 8**
+- **Unpublished legacy direct-jscodeshift rows**: legacy faster on **13 of 13**
+- **Overall**: JSSG faster on **7 of 21**; legacy faster on **14 of 21**
 
-- `codemod-cli@1.7.10` (`88e4544c`)
-- local `main` (`9d3d2616`)
-- `fix/fix-performance-jssg` (`8fafc226`)
+That split is mostly startup-path driven. When both sides run through the current Codemod CLI, JSSG is usually slightly faster. When the legacy side runs as a direct `jscodeshift` transform while JSSG runs through the published CLI, direct `jscodeshift` has much lower overhead.
 
-On those apples-to-apples local-binary runs, `#2106` was faster than both `1.7.10` and `main` for:
+### Speed — Published Legacy Also Run Through Current CLI
 
-- `replace-string-ref__react-quickly`
-- `use-context-hook__zent`
+| Codemod | Corpus | Input Files | Changed Files (J/L) | JSSG | Legacy CLI | Faster | Notes |
+|---------|--------|:-----------:|:-------------------:|-----:|-----------:|:------:|-------|
+| `react-19-migration-recipe` | recipe fixture union | 58 | 47 / 30 | 10.340s | 9.443s | Legacy | Both run through `codemod@latest`; legacy recipe changed fewer fixture files on the shared corpus |
+| `replace-reactdom-render` | package fixture corpus | 12 | 10 / 11 | 5.214s | 5.707s | JSSG | Near-parity runtime with one extra legacy fixture rewrite |
+| `replace-act-import` | package fixture corpus | 10 | 8 / 8 | 5.130s | 6.297s | JSSG | Fixture filenames were normalized to `*.test.tsx` to match the published workflow globs |
+| `use-context-hook` | package fixture corpus | 12 | 10 / 10 | 4.889s | 5.121s | JSSG | Equal rewrite count; JSSG edges legacy on runtime |
+| `replace-string-ref` | package fixture corpus | 10 | 7 / 0 | 4.975s | 5.485s | JSSG | Published legacy package made no changes on this fixture corpus |
+| `replace-use-form-state` | package fixture corpus | 14 | 12 / 11 | 5.107s | 5.431s | JSSG | Very close runtime; JSSG rewrote one additional fixture |
+| `remove-forward-ref` | package fixture corpus | 18 | 16 / 15 | 4.925s | 5.735s | JSSG | Legacy logs undetected render/ref cases on one fixture |
+| `remove-context-provider` | package fixture corpus | 7 | 4 / 4 | 4.861s | 5.425s | JSSG | Equal changed-file count with JSSG modestly faster |
 
-### Speed — Current Codemods
+### Speed — Unpublished Legacy Run Directly With jscodeshift
 
-| Codemod | Repo Slice | Input Files | Changed Files (J/L) | JSSG | jscodeshift | Faster | Notes |
-|---------|------------|:-----------:|:-------------------:|-----:|------------:|:------:|-------|
-| `replace-reactdom-render` | `zent` `packages/zent/src` | 690 | 4 / 2 | 7.330s | 2.847s | Legacy | Legacy was faster but also errored on a TS file and transformed fewer files |
-| `replace-reactdom-render` | `salesforce` render slice | 314 | 1 / 6 | 1.270s | 1.534s | JSSG | JSSG intentionally skips unsafe return-value helper patterns here |
-| `replace-act-import` | `react-beautiful-dnd` `test/` | 300 | 6 / 2 | 1.686s | 1.880s | JSSG | Legacy was slower and transformed fewer files due parser failures |
-| `replace-act-import` | `cal.diy` 1-file spot-check | 1 | 1 / 1 | 0.496s | 0.433s | Legacy | Tiny slice; startup cost dominates |
-| `replace-act-import` | `MetaMask` matched tests | 18 | 18 / 18 | 0.561s | 1.216s | JSSG | Strong JSSG speed win at equal transformed-file count |
-| `use-context-hook` | `zent` `packages/zent/src` | 690 | 47 / 47 | 1.520s | 3.765s | JSSG | Large-slice JSSG win with equal transformed-file count |
-| `use-context-hook` | `cal.diy` matched source slice | 31 | 30 / 29 | 0.568s | 1.464s | JSSG | JSSG also transforms one additional real file |
-| `use-context-hook` | `salesforce` matched source slice | 6 | 6 / 6 | 0.542s | 0.866s | JSSG | Even on the tiny slice, `#2106` is now faster |
-| `replace-string-ref` | `react-quickly` full repo | 650 | 5 / 0 | 23.536s | 55.541s | JSSG | Still much faster than legacy in practice; `#2106` is also faster than local `1.7.10` and local `main` on this case |
-| `react-proptypes-to-prop-types` | `react-quickly` authored slice | 5 | 5 / 2 | 0.637s | 0.840s | JSSG | JSSG is now faster here and still handles all 5 authored files |
-| `react-proptypes-to-prop-types` | `nylas-mail` `.jsx` slice | 135 | 135 / 109 | 0.931s | 1.606s | JSSG | JSSG is faster and handles 26 more real files than official legacy |
-
-### Speed — Imported Codemods
-
-| Codemod | Repo Slice | Input Files | Changed Files (J/L) | JSSG | jscodeshift | Faster | Notes |
-|---------|------------|:-----------:|:-------------------:|-----:|------------:|:------:|-------|
-| `create-element-to-jsx` | `react-quickly` source slice | 18 | 1 / 1 | 0.746s | 1.031s | JSSG | Clear JSSG win |
-| `manual-bind-to-arrow` | `react-quickly` bind slice | 13 | 13 / 13 | 0.535s | 0.858s | JSSG | `#2106` flips this row from legacy-faster to JSSG-faster |
-| `find-dom-node` | `react-quickly` spare-parts slice | 15 | 0 / 0 | 1.282s | 4.054s | JSSG | No-op scan; JSSG is much faster |
-| `error-boundaries` | `DataTurks` exact-source file | 1 | 1 / 1 | 0.465s | 0.522s | JSSG | Tiny slice, but `#2106` still edges legacy |
-| `react-dom-to-react-dom-factories` | `react-quickly` jQuery Mobile example | 1 | 1 / 1 | 0.536s | 0.509s | Legacy | One of only three legacy-faster rows |
-| `rename-unsafe-lifecycles` | `nylas-mail` app source slice | 45 | 45 / 45 | 0.738s | 1.212s | JSSG | Clean JSSG speed win at equal file count |
-| `remove-forward-ref` | `cal.diy` matched source slice | 7 | 4 / 4 | 0.543s | 0.809s | JSSG | `#2106` flips this row from legacy-faster to JSSG-faster |
-| `remove-context-provider` | `cal.diy` matched source slice | 24 | 22 / 22 | 0.497s | 1.074s | JSSG | Strong JSSG win |
-| `react-native-view-prop-types` | `react-native-snap-carousel` source slice | 4 | 4 / 4 | 0.555s | 0.683s | JSSG | `#2106` flips this row from legacy-faster to JSSG-faster; JSSG is also safer on the real repo because it avoids duplicate-import invalid output |
-| `update-react-imports` | `zent` TS/TSX slice | 305 | 4 / 1 | 0.823s | 1.437s | JSSG | Legacy is slower and transforms fewer files because of parser limitations |
+| Codemod | Corpus | Input Files | Changed Files (J/L) | JSSG CLI | jscodeshift | Faster | Notes |
+|---------|--------|:-----------:|:-------------------:|---------:|------------:|:------:|-------|
+| `create-element-to-jsx` | package fixture corpus | 33 | 30 / 0 | 4.955s | 0.931s | Legacy | Direct legacy transform skipped this TSX-oriented corpus entirely, but still has far lower startup overhead |
+| `error-boundaries` | package fixture corpus | 2 | 2 / 2 | 5.096s | 0.883s | Legacy | Equal rewrite count; direct `jscodeshift` startup is much lower |
+| `find-dom-node` | package fixture corpus | 8 | 4 / 0 | 4.914s | 0.849s | Legacy | Legacy skipped the fixture corpus while still finishing much faster |
+| `manual-bind-to-arrow` | package fixture corpus | 12 | 10 / 0 | 5.174s | 0.840s | Legacy | Legacy hit 2 errors and skipped the rest, but direct invocation is still much faster |
+| `pure-component` | package fixture corpus | 7 | 7 / 0 | 4.892s | 0.862s | Legacy | Legacy emitted skip warnings and made no rewrites on this corpus |
+| `pure-render-mixin` | package fixture corpus | 5 | 3 / 0 | 5.229s | 0.749s | Legacy | Legacy skipped the fixture corpus |
+| `react-dom-to-react-dom-factories` | package fixture corpus | 11 | 5 / 5 | 4.892s | 0.759s | Legacy | Equal rewrite count; direct `jscodeshift` is substantially faster |
+| `react-native-view-prop-types` | package fixture corpus | 13 | 11 / 11 | 4.930s | 1.130s | Legacy | Equal rewrite count; legacy still wins on raw runtime |
+| `react-proptypes-to-prop-types` | package fixture corpus | 24 | 22 / 20 | 5.557s | 1.120s | Legacy | Legacy is faster but also records 2 errors and lower coverage |
+| `react-to-react-dom` | package fixture corpus | 14 | 14 / 7 | 4.856s | 0.827s | Legacy | Legacy is faster but only rewrites half the fixtures and logs an error |
+| `rename-unsafe-lifecycles` | package fixture corpus | 9 | 7 / 6 | 5.261s | 0.775s | Legacy | Direct legacy path is faster but rewrites one fewer fixture |
+| `sort-comp` | package fixture corpus | 9 | 6 / 0 | 5.695s | 0.825s | Legacy | Legacy hits 9 errors on this corpus and makes no rewrites |
+| `update-react-imports` | package fixture corpus | 30 | 30 / 23 | 4.958s | 0.980s | Legacy | Legacy is faster but logs 2 errors, 5 skips, and lower coverage |
 
 ### Imported Codemods — Fixture Verification Summary
 

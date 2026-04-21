@@ -6,6 +6,7 @@ description: "Move DOM APIs from react to react-dom"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/react-to-react-dom"
 
 targets:
   languages: ["tsx"]

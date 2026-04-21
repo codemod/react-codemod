@@ -6,6 +6,7 @@ description: "Replace Context.Provider with Context in JSX"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/remove-context-provider"
 
 targets:
   languages: ["tsx"]

@@ -6,6 +6,7 @@ description: "Rename useFormState to useActionState in react-dom imports and usa
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/replace-use-form-state"
 
 targets:
   languages: ["tsx"]
