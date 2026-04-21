@@ -1,0 +1,10 @@
+{
+  "react-proptypes-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/custom-react-import-insert-newline/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

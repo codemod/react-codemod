@@ -104,7 +104,11 @@ function usesVarForRequires(rootNode: SgNode<TSX, "program">): boolean {
   return rootNode.find({ rule: { kind: "lexical_declaration" } }) === null;
 }
 
-function firstSortedImportPosition(rootNode: SgNode<TSX, "program">, moduleName: string): number {
+function firstSortedImportPosition(
+  rootNode: SgNode<TSX, "program">,
+  moduleName: string,
+  source: string,
+): number {
   const imports = rootNode.findAll({ rule: { kind: "import_statement" } });
   const lowerModule = moduleName.toLowerCase();
   let target: SgNode<TSX> | null = null;
@@ -122,7 +126,8 @@ function firstSortedImportPosition(rootNode: SgNode<TSX, "program">, moduleName:
 
   if (target) return target.range().start.index;
   const last = imports[imports.length - 1];
-  return last ? last.range().end.index : 0;
+  if (!last) return 0;
+  return statementRange(last, source).end;
 }
 
 function firstSortedRequirePosition(rootNode: SgNode<TSX, "program">, moduleName: string): number {
@@ -313,7 +318,7 @@ const transform: Transform<TSX> = async (root, options) => {
 
   if (!addedPropTypesImportByReplacement && !hasImportOrRequire(rootNode, moduleName)) {
     if (usesImportSyntax(rootNode)) {
-      const pos = firstSortedImportPosition(rootNode, moduleName);
+      const pos = firstSortedImportPosition(rootNode, moduleName, source);
       edits.push({
         startPos: pos,
         endPos: pos,

@@ -68,6 +68,30 @@ function findNamedImportNames(rootNode: SgNode<TSX, "program">, exportedName: st
   return names;
 }
 
+function lineStartIndex(source: string, index: number): number {
+  let cursor = index;
+  while (cursor > 0 && source[cursor - 1] !== "\n" && source[cursor - 1] !== "\r") {
+    cursor--;
+  }
+  return cursor;
+}
+
+function nearestAncestorOfKind(node: SgNode<TSX>, kind: string): SgNode<TSX> | null {
+  let current = node.parent();
+  while (current) {
+    if (current.kind() === kind) {
+      return current;
+    }
+    current = current.parent();
+  }
+  return null;
+}
+
+function directExpressionStatement(node: SgNode<TSX>): SgNode<TSX> | null {
+  const parent = node.parent();
+  return parent?.kind() === "expression_statement" ? parent : null;
+}
+
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
   const edits: Edit[] = [];
@@ -113,7 +137,7 @@ const transform: Transform<TSX> = async (root) => {
     const element = argList[0]!;
     const container = argList[1]!;
     const callback = argList[2];
-    const statement = call.ancestors().find((ancestor) => ancestor.kind() === "expression_statement");
+    const statement = directExpressionStatement(call);
     if (!statement) return;
 
     const rootName = nextRootName();
@@ -152,7 +176,7 @@ const transform: Transform<TSX> = async (root) => {
     if (argList.length < 1) return;
 
     const container = argList[0]!;
-    const statement = call.ancestors().find((ancestor) => ancestor.kind() === "expression_statement");
+    const statement = directExpressionStatement(call);
     if (!statement) return;
 
     const rootName = nextRootName();
@@ -166,6 +190,9 @@ const transform: Transform<TSX> = async (root) => {
       file: metricFile(root.filename()),
     });
   };
+
+  const matchedRenderCalls: SgNode<TSX>[] = [];
+  const matchedUnmountCalls: Array<{ call: SgNode<TSX>; pattern: string }> = [];
 
   if (reactDomMemberImportNames.size > 0) {
     const memberRenderCalls = rootNode.findAll({
@@ -198,7 +225,7 @@ const transform: Transform<TSX> = async (root) => {
       const callee = call.field("function");
       const objectNode = callee?.field("object");
       if (!objectNode || !reactDomMemberImportNames.has(objectNode.text())) continue;
-      applyRenderReplacement(call, "ReactDOM.render");
+      matchedRenderCalls.push(call);
     }
 
     const memberUnmountCalls = rootNode.findAll({
@@ -231,7 +258,7 @@ const transform: Transform<TSX> = async (root) => {
       const callee = call.field("function");
       const objectNode = callee?.field("object");
       if (!objectNode || !reactDomMemberImportNames.has(objectNode.text())) continue;
-      applyUnmountReplacement(call, "ReactDOM.unmountComponentAtNode");
+      matchedUnmountCalls.push({ call, pattern: "ReactDOM.unmountComponentAtNode" });
     }
   }
 
@@ -250,7 +277,7 @@ const transform: Transform<TSX> = async (root) => {
     for (const call of renderCalls) {
       const callee = call.field("function");
       if (!callee || !reactDomRenderImportNames.has(callee.text())) continue;
-      applyRenderReplacement(call, "render");
+      matchedRenderCalls.push(call);
     }
   }
 
@@ -269,8 +296,23 @@ const transform: Transform<TSX> = async (root) => {
     for (const call of unmountCalls) {
       const callee = call.field("function");
       if (!callee || !reactDomUnmountImportNames.has(callee.text())) continue;
-      applyUnmountReplacement(call, "unmountComponentAtNode");
+      matchedUnmountCalls.push({ call, pattern: "unmountComponentAtNode" });
     }
+  }
+
+  const hasUnsafeRenderUsage = matchedRenderCalls.some((call) => directExpressionStatement(call) === null);
+  if (hasUnsafeRenderUsage) {
+    return null;
+  }
+
+  for (const call of matchedRenderCalls) {
+    const callee = call.field("function");
+    const pattern = callee?.kind() === "identifier" ? "render" : "ReactDOM.render";
+    applyRenderReplacement(call, pattern);
+  }
+
+  for (const { call, pattern } of matchedUnmountCalls) {
+    applyUnmountReplacement(call, pattern);
   }
 
   if (!hasTransformations) {

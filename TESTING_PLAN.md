@@ -12,6 +12,14 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 **Phase 2 import note:** On 2026-04-20, 14 additional JSSG codemods were brought forward from `align-with-legacy-codemods`. These codemods target older or niche migration surfaces, so their immediate validation strategy is fixture-first rather than open-source repo-first. Only `class` remains legacy-only.
 
+**Additional rollout research (2026-04-21):** A second repo sweep found three especially useful follow-on candidates beyond the original four test repos:
+- `salesforce/design-system-react` at `825de01` (React 17) remains a high-value second source for `replace-reactdom-render`, `replace-act-import`, and `use-context-hook`.
+- `MetaMask/metamask-extension` at `9c3b57c` (React 17) is a strong `replace-act-import` validation target with 18 real test-file imports.
+- `react-native-snap-carousel` at `9c39995` gives `react-native-view-prop-types` an exact real-world source surface across 4 files, including the tricky case where `ViewPropTypes` is already imported.
+- `DataTurks` at `039d57e` gives `error-boundaries` an exact `unstable_handleError` source hit in production code.
+- `airbnb/react-dates` at `b7bad38` is a useful class-heavy repo for generic class codemods such as `pure-component` and `sort-comp`, though it does not expose many exact legacy API hits.
+- `rsuite` at `0b1482d` still has a large raw `ReactDOM.render` count, but current HEAD is heavily docs/example-driven, so it is a lower-quality source than `salesforce/design-system-react` for rollout decisions.
+
 ---
 
 ## Recommended Test Repos
@@ -207,6 +215,17 @@ Real-repo candidate matches already found in the current testing repos:
 | `remove-forward-ref` | `calcom/cal.diy` | Modern `forwardRef(...)` usage in app and UI packages |
 | `remove-context-provider` | `calcom/cal.diy` | Many `Context.Provider` wrappers in source packages |
 | `update-react-imports` | `youzan/zent`, `calcom/cal.diy` | Broad modern React import surface, especially in TS/TSX |
+
+Additional real-repo candidate matches confirmed on 2026-04-21:
+
+| Codemod | Repo Candidate | Notes |
+|---------|----------------|-------|
+| `error-boundaries` | `DataTurks` | Exact `unstable_handleError` hit in `bazaar/src/components/ErrorBoundary/ErrorBoundary.js` |
+| `react-native-view-prop-types` | `react-native-snap-carousel` | Exact `View.propTypes` source hits in 4 files; includes existing `ViewPropTypes` import edge case |
+| `pure-component` | `airbnb/react-dates` | 21 class-component files on current HEAD, mostly wrappers/examples and a few library classes |
+| `sort-comp` | `airbnb/react-dates`, `salesforce/design-system-react` | Good class-heavy surfaces for behavior comparison, even though the pattern itself is structural rather than API-specific |
+| `replace-reactdom-render` | `salesforce/design-system-react` | 316 real JS/JSX files under `components/`, much stronger than docs-heavy `rsuite` HEAD for rollout decisions |
+| `replace-act-import` | `MetaMask/metamask-extension` | 18 exact imports under `ui/` tests |
 
 ---
 

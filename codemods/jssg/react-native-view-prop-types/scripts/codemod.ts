@@ -166,6 +166,37 @@ function viewRequireProperty(statement: SgNode<TSX>): SgNode<TSX> | null {
     .find((property) => property.text() === "View") ?? null;
 }
 
+function hasImportSpecifier(importStmt: SgNode<TSX>, name: string): boolean {
+  return importStmt.findAll({ rule: { kind: "import_specifier" } })
+    .some((specifier) => specifier.field("name")?.text() === name);
+}
+
+function hasRequireProperty(statement: SgNode<TSX>, name: string): boolean {
+  return statement.findAll({ rule: { kind: "shorthand_property_identifier_pattern" } })
+    .some((property) => property.text() === name);
+}
+
+function hasHasteViewPropTypesImport(rootNode: SgNode<TSX>): boolean {
+  return rootNode.findAll({ rule: { kind: "import_statement" } })
+    .some((importStmt) => {
+      const source = importStmt.field("source");
+      return source?.kind() === "string" &&
+        stringValue(source) === "ViewPropTypes";
+    });
+}
+
+function hasHasteViewPropTypesRequire(rootNode: SgNode<TSX>): boolean {
+  return rootNode.findAll({
+    rule: {
+      any: [
+        { pattern: "const ViewPropTypes = require('ViewPropTypes')" },
+        { pattern: "let ViewPropTypes = require('ViewPropTypes')" },
+        { pattern: "var ViewPropTypes = require('ViewPropTypes')" },
+      ],
+    },
+  }).length > 0;
+}
+
 function statementInsertionIndex(source: string, node: SgNode<TSX>): number {
   let index = node.range().end.index;
   while (index < source.length && (source[index] === ";" || source[index] === "\r" || source[index] === "\n")) {
@@ -184,6 +215,14 @@ const transform: Transform<TSX> = async (root) => {
   const hasteRequireStatement = findHasteRequireStatement(rootNode);
   const reactNativeImportStatement = findReactNativeImportStatement(rootNode);
   const reactNativeRequireStatement = findReactNativeRequireStatement(rootNode);
+  const hasExistingHasteViewPropTypesImport = hasHasteViewPropTypesImport(rootNode);
+  const hasExistingHasteViewPropTypesRequire = hasHasteViewPropTypesRequire(rootNode);
+  const hasExistingReactNativeImportViewPropTypes = reactNativeImportStatement
+    ? hasImportSpecifier(reactNativeImportStatement, "ViewPropTypes")
+    : false;
+  const hasExistingReactNativeRequireViewPropTypes = reactNativeRequireStatement
+    ? hasRequireProperty(reactNativeRequireStatement, "ViewPropTypes")
+    : false;
 
   let replacements = 0;
   for (const member of rootNode.findAll({ rule: { kind: "member_expression" } })) {
@@ -209,7 +248,9 @@ const transform: Transform<TSX> = async (root) => {
   }).some(isViewBindingNode);
 
   if (hasteImportStatement) {
-    if (keepViewBinding) {
+    if (hasExistingHasteViewPropTypesImport) {
+      // Keep the existing import intact; the file already binds ViewPropTypes.
+    } else if (keepViewBinding) {
       edits.push({
         startPos: hasteImportStatement.range().end.index,
         endPos: hasteImportStatement.range().end.index,
@@ -219,7 +260,9 @@ const transform: Transform<TSX> = async (root) => {
       edits.push(hasteImportStatement.replace("import ViewPropTypes from 'ViewPropTypes';"));
     }
   } else if (hasteRequireStatement) {
-    if (keepViewBinding) {
+    if (hasExistingHasteViewPropTypesRequire) {
+      // Keep the existing require intact; the file already binds ViewPropTypes.
+    } else if (keepViewBinding) {
       edits.push({
         startPos: statementInsertionIndex(source, hasteRequireStatement),
         endPos: statementInsertionIndex(source, hasteRequireStatement),
@@ -231,7 +274,9 @@ const transform: Transform<TSX> = async (root) => {
   } else if (reactNativeImportStatement) {
     const specifier = viewImportSpecifier(reactNativeImportStatement);
     if (specifier) {
-      if (keepViewBinding) {
+      if (hasExistingReactNativeImportViewPropTypes) {
+        // Keep the existing import intact; the file already binds ViewPropTypes.
+      } else if (keepViewBinding) {
         edits.push({
           startPos: specifier.range().end.index,
           endPos: specifier.range().end.index,
@@ -244,7 +289,9 @@ const transform: Transform<TSX> = async (root) => {
   } else if (reactNativeRequireStatement) {
     const property = viewRequireProperty(reactNativeRequireStatement);
     if (property) {
-      if (keepViewBinding) {
+      if (hasExistingReactNativeRequireViewPropTypes) {
+        // Keep the existing require intact; the file already binds ViewPropTypes.
+      } else if (keepViewBinding) {
         edits.push({
           startPos: property.range().end.index,
           endPos: property.range().end.index,

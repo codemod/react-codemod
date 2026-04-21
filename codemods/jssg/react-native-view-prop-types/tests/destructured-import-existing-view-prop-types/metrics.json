@@ -1,0 +1,10 @@
+{
+  "react-native-view-prop-types-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/destructured-import-existing-view-prop-types/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}
