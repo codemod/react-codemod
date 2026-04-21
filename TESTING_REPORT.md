@@ -27,6 +27,46 @@
 
 **Bottom line**: real-repo coverage is broader than before. The last confirmed functional regression class from this pass was in `replace-reactdom-render`, and it is now closed by conservatively skipping return-value-dependent helper patterns instead of rewriting them unsafely. The imported codemods also gained two stronger real-repo signals: `error-boundaries` now has exact-source parity on `DataTurks`, and `react-native-view-prop-types` now has a real-world safety win on `react-native-snap-carousel`.
 
+## Speed Benchmarks
+
+These timing numbers are **single-run wall-clock** measurements on this machine. They exclude repo copy/setup time and measure only the codemod command itself on the same target slices used for behavior evaluation. JSSG was run via the local package `codemod jssg run`. Legacy timings were run with local `jscodeshift`, using:
+
+- official upstream `reactjs/react-codemod` transform files for the current React 19 codemods and for `react-proptypes-to-prop-types`
+- the local legacy snapshot under `codemods/legacy/transforms` for the imported codemods, because that is the implementation used in our parity work
+
+Overall result on this machine: **JSSG was faster on 11 of 21 benchmarked codemod/repo pairs; legacy was faster on 10 of 21**. The raw time alone is not enough to judge quality, so the table also includes the changed-file counts for context.
+
+### Speed — Current Codemods
+
+| Codemod | Repo Slice | Input Files | Changed Files (J/L) | JSSG | jscodeshift | Faster | Notes |
+|---------|------------|:-----------:|:-------------------:|-----:|------------:|:------:|-------|
+| `replace-reactdom-render` | `zent` `packages/zent/src` | 690 | 4 / 2 | 7.020s | 2.847s | Legacy | Legacy was faster but also errored on a TS file and transformed fewer files |
+| `replace-reactdom-render` | `salesforce` render slice | 314 | 1 / 6 | 1.952s | 1.534s | Legacy | JSSG intentionally skips unsafe return-value helper patterns here |
+| `replace-act-import` | `react-beautiful-dnd` `test/` | 300 | 6 / 2 | 1.349s | 1.880s | JSSG | Legacy was slower and transformed fewer files due parser failures |
+| `replace-act-import` | `cal.diy` 1-file spot-check | 1 | 1 / 1 | 1.031s | 0.433s | Legacy | Tiny slice; startup cost dominates |
+| `replace-act-import` | `MetaMask` matched tests | 18 | 18 / 18 | 1.181s | 1.216s | JSSG | Near tie |
+| `use-context-hook` | `zent` `packages/zent/src` | 690 | 47 / 47 | 1.421s | 3.765s | JSSG | Strongest large-slice speed win with equal transformed-file count |
+| `use-context-hook` | `cal.diy` matched source slice | 31 | 30 / 29 | 1.351s | 1.464s | JSSG | JSSG also transforms one additional real file |
+| `use-context-hook` | `salesforce` matched source slice | 6 | 6 / 6 | 1.444s | 0.866s | Legacy | Tiny slice; startup cost dominates |
+| `replace-string-ref` | `react-quickly` full repo | 650 | 5 / 0 | 6.201s | 55.541s | JSSG | Legacy parser failures plus zero transformed files; JSSG is dramatically faster in practice |
+| `react-proptypes-to-prop-types` | `react-quickly` authored slice | 5 | 5 / 2 | 1.117s | 0.840s | Legacy | Legacy is faster on the tiny slice but errors on 3 of 5 authored files |
+| `react-proptypes-to-prop-types` | `nylas-mail` `.jsx` slice | 135 | 135 / 109 | 1.130s | 1.606s | JSSG | JSSG is faster and handles 26 more real files than official legacy |
+
+### Speed — Imported Codemods
+
+| Codemod | Repo Slice | Input Files | Changed Files (J/L) | JSSG | jscodeshift | Faster | Notes |
+|---------|------------|:-----------:|:-------------------:|-----:|------------:|:------:|-------|
+| `create-element-to-jsx` | `react-quickly` source slice | 18 | 1 / 1 | 1.028s | 1.031s | JSSG | Essentially a tie |
+| `manual-bind-to-arrow` | `react-quickly` bind slice | 13 | 13 / 13 | 1.027s | 0.858s | Legacy | Small but real legacy speed edge on this slice |
+| `find-dom-node` | `react-quickly` spare-parts slice | 15 | 0 / 0 | 1.659s | 4.054s | JSSG | No-op scan; JSSG is much faster |
+| `error-boundaries` | `DataTurks` exact-source file | 1 | 1 / 1 | 1.006s | 0.522s | Legacy | 1-file slice; startup dominates |
+| `react-dom-to-react-dom-factories` | `react-quickly` jQuery Mobile example | 1 | 1 / 1 | 1.542s | 0.509s | Legacy | 1-file slice; startup dominates |
+| `rename-unsafe-lifecycles` | `nylas-mail` app source slice | 45 | 45 / 45 | 0.975s | 1.212s | JSSG | Clean JSSG speed win at equal file count |
+| `remove-forward-ref` | `cal.diy` matched source slice | 7 | 4 / 4 | 0.949s | 0.809s | Legacy | Small legacy edge on this slice |
+| `remove-context-provider` | `cal.diy` matched source slice | 24 | 22 / 22 | 0.950s | 1.074s | JSSG | Small JSSG edge at equal file count |
+| `react-native-view-prop-types` | `react-native-snap-carousel` source slice | 4 | 4 / 4 | 1.405s | 0.683s | Legacy | Legacy is faster on 4 files, but JSSG is safer on the real repo because it avoids duplicate-import invalid output |
+| `update-react-imports` | `zent` TS/TSX slice | 305 | 4 / 1 | 1.067s | 1.437s | JSSG | Legacy is slower and transforms fewer files because of parser limitations |
+
 ### Imported Codemods — Fixture Verification Summary
 
 | Codemod | Evaluation Type | Result | Notes |

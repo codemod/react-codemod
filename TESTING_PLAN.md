@@ -12,6 +12,8 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 **Phase 2 import note:** On 2026-04-20, 14 additional JSSG codemods were brought forward from `align-with-legacy-codemods`. These codemods target older or niche migration surfaces, so their immediate validation strategy is fixture-first rather than open-source repo-first. Only `class` remains legacy-only.
 
+**Coverage audit (2026-04-21):** Current upstream `reactjs/react-codemod` `HEAD` is `5207d594fad6f8b39c51fd7edd2bcb51047dc872`. Its `transforms/` directory contains 21 transforms. This repo now has JSSG implementations for 20 of them; the only upstream transform without a JSSG counterpart here is `class`.
+
 **Additional rollout research (2026-04-21):** A second repo sweep found three especially useful follow-on candidates beyond the original four test repos:
 - `salesforce/design-system-react` at `825de01` (React 17) remains a high-value second source for `replace-reactdom-render`, `replace-act-import`, and `use-context-hook`.
 - `MetaMask/metamask-extension` at `9c3b57c` (React 17) is a strong `replace-act-import` validation target with 18 real test-file imports.
