@@ -57,7 +57,7 @@ That split is mostly startup-path driven. When both sides run through the curren
 
 | Codemod | Corpus | Input Files | Changed Files (J/L) | JSSG | Legacy CLI | Faster | Notes |
 |---------|--------|:-----------:|:-------------------:|-----:|-----------:|:------:|-------|
-| `react-19-migration-recipe` | recipe fixture union | 58 | 47 / 30 | 10.340s | 9.443s | Legacy | Both run through `codemod@latest`; legacy recipe changed fewer fixture files on the shared corpus |
+| `react-19-migration-recipe` | `calcom/cal.com` repo | 7500 | 34 / 4 | ~1m30s | ~3m00s | JSSG (~2×) | Real-repo run through `codemod@latest` on both sides; JSSG rewrote 8.5× more files in half the wall-clock time |
 | `replace-reactdom-render` | package fixture corpus | 12 | 10 / 11 | 5.214s | 5.707s | JSSG | Near-parity runtime with one extra legacy fixture rewrite |
 | `replace-act-import` | package fixture corpus | 10 | 8 / 8 | 5.130s | 6.297s | JSSG | Fixture filenames were normalized to `*.test.tsx` to match the published workflow globs |
 | `use-context-hook` | package fixture corpus | 12 | 10 / 10 | 4.889s | 5.121s | JSSG | Equal rewrite count; JSSG edges legacy on runtime |
