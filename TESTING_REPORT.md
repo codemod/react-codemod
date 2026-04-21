@@ -67,6 +67,42 @@ Overall result on this machine: **JSSG was faster on 11 of 21 benchmarked codemo
 | `react-native-view-prop-types` | `react-native-snap-carousel` source slice | 4 | 4 / 4 | 1.405s | 0.683s | Legacy | Legacy is faster on 4 files, but JSSG is safer on the real repo because it avoids duplicate-import invalid output |
 | `update-react-imports` | `zent` TS/TSX slice | 305 | 4 / 1 | 1.067s | 1.437s | JSSG | Legacy is slower and transforms fewer files because of parser limitations |
 
+### Speed — Preview CLI (`feature/workflow-tui-rewrite`)
+
+On 2026-04-21, I reran the **JSSG side only** of the same benchmark matrix using the local preview CLI from `/Users/mohabsameh/Downloads/codemod` on branch `feature/workflow-tui-rewrite` at commit `f6080826`.
+
+Important caveat: this comparison uses the locally built `target/debug/codemod` binary from that branch, with compile time excluded. That makes it useful for directional comparison against the current CLI, but not a perfect release-vs-release apples-to-apples measurement.
+
+Headline result:
+
+- Preview CLI was faster on **18 of 21** JSSG benchmark cases
+- Preview CLI was slower on **3 of 21** cases
+
+Largest preview CLI improvements vs current CLI JSSG baseline:
+
+| Codemod | Repo Slice | Current CLI | Preview CLI | Delta | Ratio |
+|---------|------------|------------:|------------:|------:|------:|
+| `replace-reactdom-render` | `zent` `packages/zent/src` | 7.020s | 5.452s | -1.569s | 0.78× |
+| `react-dom-to-react-dom-factories` | `react-quickly` example app | 1.542s | 0.505s | -1.036s | 0.33× |
+| `react-native-view-prop-types` | `react-native-snap-carousel` | 1.405s | 0.554s | -0.851s | 0.39× |
+| `use-context-hook` | `salesforce` 6-file slice | 1.444s | 0.720s | -0.723s | 0.50× |
+| `react-proptypes-to-prop-types` | `react-quickly` authored slice | 1.117s | 0.481s | -0.636s | 0.43× |
+| `replace-act-import` | `MetaMask` matched tests | 1.181s | 0.579s | -0.602s | 0.49× |
+
+Largest preview CLI regressions vs current CLI JSSG baseline:
+
+| Codemod | Repo Slice | Current CLI | Preview CLI | Delta | Ratio |
+|---------|------------|------------:|------------:|------:|------:|
+| `replace-string-ref` | full `react-quickly` repo | 6.201s | 28.901s | +22.701s | 4.66× |
+| `use-context-hook` | `zent` `packages/zent/src` | 1.421s | 3.045s | +1.624s | 2.14× |
+| `replace-act-import` | `react-beautiful-dnd` `test/` | 1.349s | 1.950s | +0.601s | 1.45× |
+
+Interpretation:
+
+- The preview CLI appears to reduce startup/engine overhead on many small and medium slices.
+- The biggest regressions show up on larger full-repo or large-slice JSSG runs, especially `replace-string-ref__react-quickly` and `use-context-hook__zent`.
+- Because this was measured with a local debug build of the preview branch, the absolute numbers should be treated as directional. Still, the relative pattern is useful: the preview CLI is likely improved for many short-lived runs, but there may be a regression in one or more hot paths that matters on larger JSSG workloads.
+
 ### Imported Codemods — Fixture Verification Summary
 
 | Codemod | Evaluation Type | Result | Notes |
