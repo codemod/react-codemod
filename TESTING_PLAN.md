@@ -31,13 +31,13 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 | Repo | Stars | React Version | Patterns Found | Language |
 |------|-------|---------------|----------------|----------|
 | **[youzan/zent](https://github.com/youzan/zent)** | 2.2k | 17.0.x (dev), ^17 (peer) | `ReactDOM.render` (~398), `react-dom/test-utils` (~17), `useContext` | TypeScript 65% |
-| **[salesforce/design-system-react](https://github.com/salesforce/design-system-react)** | ~1k | ^17.0.2 (dev), >=16.8 (peer) | `ReactDOM.render` (~315), `useContext` | JavaScript |
+| **[salesforce/design-system-react](https://github.com/salesforce/design-system-react)** | ~1k | ^17.0.2 (dev), >=16.8 (peer) | `ReactDOM.render` (~315 grep matches / ~316 files under `components/`), `useContext` | JavaScript |
 | **[atlassian/react-beautiful-dnd](https://github.com/atlassian/react-beautiful-dnd)** | 33k | 16.13.1 (dev), ^16.8.5‖^17‖^18 (peer) | `react-dom/test-utils` (multiple), `ReactDOM.render` | JS + Flow |
 | **[calcom/cal.com](https://github.com/calcom/cal.com)** (redirects to [`calcom/cal.diy`](https://github.com/calcom/cal.diy)) | 41.4k | 18.2.0 in `apps/web`, `^18 || ^19` across workspace packages | `useContext` (~47 raw refs, 30 actual codemod hits), `react-dom/test-utils` (1) | TypeScript |
 
 ### Tier 2 — Single-Pattern Repos (well-known, good signal)
 
-| Repo | React Version | Primary Pattern | Match Count |
+| Repo | React Version | Primary Pattern | Grep matches |
 |------|---------------|-----------------|-------------|
 | **[MetaMask/metamask-extension](https://github.com/MetaMask/metamask-extension)** | 13.1k stars, React ^16.12.0 | `react-dom/test-utils` | ~18 |
 | **[rsuite/rsuite](https://github.com/rsuite/rsuite)** | React ^19.0.0 (dev), >=18 (peer) | `ReactDOM.render` | ~776 |
@@ -59,13 +59,13 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 **Pattern:** `ReactDOM.render(element, container)` → `createRoot(container).render(element)`
 
-| Repo | Matches | Notes |
-|------|---------|-------|
+| Repo | Grep matches | Notes |
+|------|--------------|-------|
 | rsuite/rsuite | ~776 | Largest count, but already on React 19 dev |
 | alibaba-fusion/next | ~657 | Alibaba component library |
 | kingdee/kdesign | ~482 | React component design system |
 | **youzan/zent** | ~398 | ★ React 17, TypeScript, ideal target |
-| **salesforce/design-system-react** | ~315 | ★ React 17, enterprise library |
+| **salesforce/design-system-react** | ~315 | ★ React 17, enterprise library (~316 real JS/JSX files under `components/` on rollout inspection) |
 | nfl/react-helmet | ~100+ | Widely used, small scope |
 
 **Recommended test repo:** `youzan/zent` (React 17 + TypeScript + high match count)
@@ -78,8 +78,8 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 **Pattern:** `import { act } from 'react-dom/test-utils'` → `import { act } from 'react'`
 
-| Repo | Matches | Notes |
-|------|---------|-------|
+| Repo | Grep matches | Notes |
+|------|--------------|-------|
 | **OnsenUI/OnsenUI** | ~37 | ★ Highest count |
 | Foundry376/Mailspring | ~23 | Electron email client |
 | **MetaMask/metamask-extension** | ~18 | ★ Very well-known, React 16 |
@@ -97,8 +97,8 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 **Pattern:** `React.PropTypes.xxx` → `import PropTypes from 'prop-types'; PropTypes.xxx`
 
-| Repo | Matches | Notes |
-|------|---------|-------|
+| Repo | Grep matches | Notes |
+|------|--------------|-------|
 | jianliaoim/talk-os | ~253 | CoffeeScript + React, older |
 | **nylas/nylas-mail** | ~193 | ★ Archived, also has string refs |
 | **azat-co/react-quickly** | ~155 | ★ Book examples, also has string refs |
@@ -116,8 +116,8 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 **Pattern:** `ref="myRef"` in JSX inside class components → `ref={(ref) => { this.myRef = ref; }}`
 
-| Repo | Matches | Notes |
-|------|---------|-------|
+| Repo | Grep matches | Notes |
+|------|--------------|-------|
 | **azat-co/react-quickly** | ~120 | ★ Highest count, also has PropTypes |
 | cockpit-project/cockpit | ~54 | Active Linux admin tool |
 | nicehash/whistle | ~52 | Network debugging tool |
@@ -182,22 +182,24 @@ For modern React 18/19 coverage, `calcom/cal.com` is a strong fourth repo even t
 
 The codemods below were imported into the current branch from `align-with-legacy-codemods` on 2026-04-20. Because many of them target legacy code patterns that are harder to find reliably in modern public repos, the first evaluation pass should rely on their curated fixture suites, differential tests, and targeted error/warning tests.
 
+The **Next Real-Repo Priority** column reflects *pre-sampling* planning intent. Rows whose real-repo pass has since been completed in `TESTING_REPORT.md` are marked **Sampled** with a one-line outcome — those rows no longer need further real-repo work to unblock parity decisions.
+
 | Codemod | Initial Evaluation Surface | Next Real-Repo Priority |
 |---------|----------------------------|-------------------------|
-| `create-element-to-jsx` | 34 fixtures + error/differential tests | High |
-| `error-boundaries` | 2 fixtures | Medium |
+| `create-element-to-jsx` | 34 fixtures + error/differential tests | **Sampled** (parity on `react-quickly`) |
+| `error-boundaries` | 2 fixtures | **Sampled** (parity on `DataTurks`) |
 | `find-dom-node` | 9 fixtures | High |
-| `manual-bind-to-arrow` | 11 fixtures | Medium |
+| `manual-bind-to-arrow` | 12 fixtures | **Sampled** (parity on `react-quickly` after fix) |
 | `pure-component` | 11 fixtures + warning/differential tests | High |
 | `pure-render-mixin` | 7 fixtures | Medium |
-| `react-dom-to-react-dom-factories` | 10 fixtures | Low |
-| `react-native-view-prop-types` | 12 fixtures | Low |
+| `react-dom-to-react-dom-factories` | 11 fixtures | **Sampled** (parity on `react-quickly` after fix) |
+| `react-native-view-prop-types` | 12 fixtures | **Sampled** (JSSG safer on `react-native-snap-carousel`) |
 | `react-to-react-dom` | 14 fixtures + error tests | High |
-| `remove-context-provider` | 7 fixtures | Medium |
-| `remove-forward-ref` | 17 fixtures | Medium |
-| `rename-unsafe-lifecycles` | 9 fixtures | High |
+| `remove-context-provider` | 7 fixtures | **Sampled** (parity on `calcom/cal.diy`) |
+| `remove-forward-ref` | 18 fixtures | **Sampled** (JSSG ahead on `calcom/cal.diy` after fix) |
+| `rename-unsafe-lifecycles` | 9 fixtures | **Sampled** (parity on `nylas-mail`) |
 | `sort-comp` | 11 fixtures | Medium |
-| `update-react-imports` | 33 fixtures | High |
+| `update-react-imports` | 33 fixtures | **Sampled, inconclusive** (legacy parser failure on `youzan/zent`; cleaner comparison target still needed) |
 
 For these imported codemods, the recommended evaluation order is:
 
@@ -265,7 +267,7 @@ Additional real-repo candidate matches confirmed on 2026-04-21:
 
 ## Notes
 
-- Match counts are approximate (from grep.app searches, may include comments/docs)
+- **Match counts in the per-codemod tables above are raw grep.app hits — not file counts.** They are approximate and may include comments, docs, or multiple occurrences in the same file. The authoritative *files transformed* numbers live in `TESTING_REPORT.md`, where they are consistently smaller than the raw match counts reported here.
 - Some repos are archived/unmaintained — that's fine for testing, the code patterns are what matter
 - `useFormState` testing is synthetic-only; recommend documenting this proactively for the React team
 - `useContext` is so widespread that any React 16.8+ repo works; no need for a dedicated test repo

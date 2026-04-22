@@ -16,16 +16,18 @@
 
 ## Summary
 
-| Codemod | Verdict | JSSG Files | Legacy Files | Notes |
-|---------|---------|:----------:|:------------:|-------|
-| `replace-reactdom-render` | **Safe but conservative** | 4 | 4 | `youzan/zent` remains clean; on `salesforce/design-system-react`, JSSG now skips unsafe helper patterns that rely on the return value of `ReactDOM.render(...)` |
-| `replace-act-import` | **JSSG wins** | **18** | 18 | `react-beautiful-dnd` still shows the 6× coverage win; `MetaMask` adds an 18-file semantic-parity check |
-| `use-context-hook` | **JSSG wins** | **30** | 29 | `youzan/zent` was byte-identical; `cal.com` adds 2 real call sites and avoids 1 unused-import false positive; `salesforce/design-system-react` adds a 6-file JS spot-check |
-| `replace-string-ref` | **JSSG wins** | **5** | 0 | Legacy skips `.jsx` files entirely |
-| `replace-use-form-state` | **Perfect parity** | 1 | 1 | Fixed: now moves import from `react-dom` to `react` |
-| `react-proptypes-to-prop-types` | **JSSG wins** | **135** | 109 | Official legacy transform is not on the registry, but local jscodeshift evaluation shows JSSG handles 26 additional real files that the upstream transform errors on |
+> **Reading this table**: each codemod was exercised against more than one repo slice. The `JSSG Files / Legacy Files` columns below show the **headline repo** for that codemod (identified in the `Source repo` column), not a union across all slices. Per-repo breakdowns live in the detailed sections.
 
-**Bottom line**: real-repo coverage is broader than before. The last confirmed functional regression class from this pass was in `replace-reactdom-render`, and it is now closed by conservatively skipping return-value-dependent helper patterns instead of rewriting them unsafely. The imported codemods also gained two stronger real-repo signals: `error-boundaries` now has exact-source parity on `DataTurks`, and `react-native-view-prop-types` now has a real-world safety win on `react-native-snap-carousel`.
+| Codemod | Verdict | Source repo | JSSG Files | Legacy Files | Notes |
+|---------|---------|-------------|:----------:|:------------:|-------|
+| `replace-reactdom-render` | **Safe but conservative** | `youzan/zent` | 4 | 4 | `youzan/zent` remains clean; on `salesforce/design-system-react`, JSSG transforms 1 file and legacy transforms 6 because JSSG now skips unsafe helper patterns that rely on the return value of `ReactDOM.render(...)` (see §1) |
+| `replace-act-import` | **JSSG wins** | `MetaMask/metamask-extension` | **18** | 18 | Shown repo is a parity check; the "JSSG wins" verdict comes from `react-beautiful-dnd` where JSSG transforms 6 files vs legacy 1 (see §2) |
+| `use-context-hook` | **JSSG wins** | `calcom/cal.diy` (`v6.2.0`) | **30** | 29 | `youzan/zent` was byte-identical 47/47 (see §3); `cal.com` adds 2 real call sites and avoids 1 unused-import false positive; `salesforce/design-system-react` adds a 6-file JS spot-check |
+| `replace-string-ref` | **JSSG wins** | `azat-co/react-quickly` | **5** | 0 | Legacy skips `.jsx` files entirely |
+| `replace-use-form-state` | **Perfect parity** | synthetic fixture | 1 | 1 | Fixed: now moves import from `react-dom` to `react` |
+| `react-proptypes-to-prop-types` | **JSSG wins** | `nylas/nylas-mail` | **135** | 109 | Official legacy transform is not on the registry, but local jscodeshift evaluation shows JSSG handles 26 additional real files that the upstream transform errors on |
+
+**Bottom line**: real-repo coverage is broader than before. Every functional regression surfaced during this pass has been resolved (see the full list in *Resolved Regressions* below); the most recent coverage-shaped gap in `replace-reactdom-render` is now closed by conservatively skipping return-value-dependent helper patterns instead of rewriting them unsafely. The imported codemods also gained two stronger real-repo signals: `error-boundaries` now has exact-source parity on `DataTurks`, and `react-native-view-prop-types` now has a real-world safety win on `react-native-snap-carousel`.
 
 ## Speed Benchmarks
 
