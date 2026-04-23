@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/prop-types-typescript"
+version: "0.1.1"
+description: "Convert React PropTypes declarations into TypeScript props interfaces"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/prop-types-typescript"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "PropTypes", "TypeScript"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []
