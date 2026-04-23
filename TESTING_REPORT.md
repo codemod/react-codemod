@@ -1,33 +1,34 @@
 # JSSG vs jscodeshift — Side-by-Side Testing Report
 
-> **Goal**: Determine whether the new JSSG (ast-grep) codemods regress any intentional behavior compared to the legacy jscodeshift codemods from `reactjs/react-codemod`.
+> **Goal**: Determine whether the new JSSG (ast-grep) codemods regress any intentional behavior compared to the relevant baseline: legacy jscodeshift codemods from `reactjs/react-codemod`, or `codemod/commons` where no legacy transform exists.
 
 ## Test Environment
 
 | Item | Detail |
 |------|--------|
-| **JSSG codemods** | `@react-new/*` (v0.1.1, published to Codemod Registry) |
-| **Legacy codemods** | `react/19/*` (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms |
+| **JSSG codemods** | `@react-new/*` (published v0.1.1) plus current local branch implementations under `codemods/` for newly ported or not-yet-published work such as `prop-types-typescript` |
+| **Comparison baselines** | `react/19/*` (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms; `prop-types-typescript` compared against `codemod/commons/codemods/react/prop-types-typescript` |
 | **CLI** | `codemod@latest` with `--no-interactive` flag |
-| **Test repos** | youzan/zent (React 17, TS), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`) |
+| **Test repos** | youzan/zent (React 17, TS), salesforce/design-system-react (React 17, JS), MetaMask/metamask-extension (React 16/17-era app), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`), plus targeted imported-codemod slices from `DataTurks` and `react-native-snap-carousel` |
 | **Phase 2 import verification** | On 2026-04-20, imported 14 additional JSSG codemods from `align-with-legacy-codemods` and verified them with `pnpm run test`, `pnpm run check-types`, and `pnpm run ci` on this branch |
 
 ---
 
 ## Summary
 
-> **Reading this table**: each codemod was exercised against more than one repo slice. The `JSSG Files / Legacy Files` columns below show the **headline repo** for that codemod (identified in the `Source repo` column), not a union across all slices. Per-repo breakdowns live in the detailed sections.
+> **Reading this table**: each codemod was exercised against more than one repo slice. The `JSSG Files / Baseline Files` columns below show the **headline repo** for that codemod (identified in the `Source repo` column), not a union across all slices. Unless noted otherwise, the baseline is the legacy jscodeshift transform from `reactjs/react-codemod`. Per-repo breakdowns live in the detailed sections.
 
-| Codemod | Verdict | Source repo | JSSG Files | Legacy Files | Notes |
-|---------|---------|-------------|:----------:|:------------:|-------|
+| Codemod | Verdict | Source repo | JSSG Files | Baseline Files | Notes |
+|---------|---------|-------------|:----------:|:--------------:|-------|
 | `replace-reactdom-render` | **Safe but conservative** | `youzan/zent` | 4 | 4 | `youzan/zent` remains clean; on `salesforce/design-system-react`, JSSG transforms 1 file and legacy transforms 6 because JSSG now skips unsafe helper patterns that rely on the return value of `ReactDOM.render(...)` (see §1) |
 | `replace-act-import` | **JSSG wins** | `MetaMask/metamask-extension` | **18** | 18 | Shown repo is a parity check; the "JSSG wins" verdict comes from `react-beautiful-dnd` where JSSG transforms 6 files vs legacy 1 (see §2) |
 | `use-context-hook` | **JSSG wins** | `calcom/cal.diy` (`v6.2.0`) | **30** | 29 | `youzan/zent` was byte-identical 47/47 (see §3); `cal.com` adds 2 real call sites and avoids 1 unused-import false positive; `salesforce/design-system-react` adds a 6-file JS spot-check |
 | `replace-string-ref` | **JSSG wins** | `azat-co/react-quickly` | **5** | 0 | Legacy skips `.jsx` files entirely |
 | `replace-use-form-state` | **Perfect parity** | synthetic fixture | 1 | 1 | Fixed: now moves import from `react-dom` to `react` |
+| `prop-types-typescript` | **JSSG wins** | `MetaMask/metamask-extension` | **275** | 263 | Compared against `commons`, not legacy. JSSG now has zero sampled parse failures, never misses a `commons` file, and covers 12 additional MetaMask files that `commons` crashes on (see §6) |
 | `react-proptypes-to-prop-types` | **JSSG wins** | `nylas/nylas-mail` | **135** | 109 | Official legacy transform is not on the registry, but local jscodeshift evaluation shows JSSG handles 26 additional real files that the upstream transform errors on |
 
-**Bottom line**: real-repo coverage is broader than before. Every functional regression surfaced during this pass has been resolved (see the full list in *Resolved Regressions* below); the most recent coverage-shaped gap in `replace-reactdom-render` is now closed by conservatively skipping return-value-dependent helper patterns instead of rewriting them unsafely. The imported codemods also gained two stronger real-repo signals: `error-boundaries` now has exact-source parity on `DataTurks`, and `react-native-view-prop-types` now has a real-world safety win on `react-native-snap-carousel`.
+**Bottom line**: the previously tested codemods remain in good shape, and the commons-aligned `prop-types-typescript` step is now in better shape than the `commons` baseline on the sampled repos. JSSG has zero sampled parse failures, never misses a file that `commons` changes, and the remaining output differences are either safe JSSG improvements or non-functional printer drift.
 
 ## Speed Benchmarks
 
@@ -340,7 +341,70 @@ No action needed — regressions resolved.
 
 ---
 
-### 6. `react-proptypes-to-prop-types` — **JSSG Outperforms Official Legacy jscodeshift**
+### 6. `prop-types-typescript` — **JSSG Outperforms `commons` on the Sampled Repo Surface**
+
+This codemod does not have a `reactjs/react-codemod` equivalent. The comparison baseline here is the newer `codemod/commons` implementation at `codemods/react/prop-types-typescript`.
+
+Across the three relevant repo slices below there were **zero `commons`-only files**: JSSG did not miss a single file that `commons` transformed. After the latest parity fixes, JSSG also has **zero sampled parse failures**.
+
+| Repo slice | Matched files | JSSG | `commons` | Overlap | Notes |
+|------------|:-------------:|:----:|:---------:|:-------:|-------|
+| `salesforce/design-system-react` | 98 | 97 | 97 | 97 | Same file coverage; `commons` crashes on 1 file and JSSG parses all overlapping outputs |
+| `MetaMask/metamask-extension` | 275 | 275 | 263 | 263 | JSSG covers 12 additional files because `commons` crashes on them; JSSG parses all overlapping outputs |
+| `atlassian/react-beautiful-dnd` | 2 | 2 | 2 | 2 | Clean parity spot-check |
+
+#### Repo slice 1: `atlassian/react-beautiful-dnd`
+
+This is the clean control case. Both codemods transform the same 2 files, and both transformed files normalize equal. On the small real-world surface that repo exposes, JSSG is already at parity with `commons`.
+
+#### Repo slice 2: `salesforce/design-system-react`
+
+On `design-system-react`, both codemods transform the same 97 files from a 98-file inline-`propTypes` surface. `commons` crashes on `components/lookup/lookup.jsx` with:
+
+```text
+TypeError: Cannot read properties of null (reading 'name')
+```
+
+After JSX-whitespace normalization, 95 of the 96 parseable overlap files are AST-equal. The only remaining non-equal file is `components/utilities/menu-list/index.jsx`, and the delta there is non-functional indentation drift inside a CSS template literal. JSSG also parses `components/popover/popover.jsx` successfully, while `commons` still emits an invalid function-type union there.
+
+#### Repo slice 3: `MetaMask/metamask-extension`
+
+`MetaMask` is the stress case. JSSG transforms all 275 matched files. `commons` transforms 263 and crashes on 12 real files, with representative failures like:
+
+```text
+ui/components/app/permissions-connect-header/permissions-connect-header.component.js
+Error: undefined does not match field "key": Expression of type TSPropertySignature
+
+ui/components/multichain/account-list-item-menu/account-list-item-menu.js
+Error: undefined does not match field "name": string of type Identifier
+```
+
+After the latest fixes:
+
+- JSSG covers 12 additional real files because `commons` crashes on them.
+- JSSG parses all 275 transformed outputs.
+- In the 263-file overlap, 244 parseable outputs are AST-equal after JSX-whitespace normalization.
+
+The 9 remaining AST differences are all safe JSSG divergences:
+
+- `configure-snap-popup.tsx`, `srp-details-modal.tsx`, `account-network-indicator.tsx`, `domain-input-resolution-cell.tsx`, `network-list-item.tsx`, `page/page.tsx`, and `qr-code-view.tsx`: JSSG preserves the file’s existing inline or named parameter types instead of replacing them with a weaker generated `*Props` interface from `propTypes`.
+- `permission-cell.js`: JSSG converts a `oneOfType([string, object])` shape to `string | object`, while `commons` widens the same field to `unknown | unknown`.
+- `modal.js`: the remaining delta is non-functional output drift around the generated interface location and a cleaned-up leading directive/empty-statement sequence.
+
+Two especially important bugs were closed by this pass:
+
+- imported/bare `PureComponent` and `Component` classes now receive props generics correctly
+- removing `static propTypes` or nested `Component.propTypes = ...` no longer leaves stray tokens or deletes enclosing helper functions/test blocks
+
+#### Recommendation
+
+Treat `prop-types-typescript` as stronger than the sampled `commons` baseline now. The remaining differences are safe enough to keep unless you want to spend more time chasing output-shape parity for already-typed files.
+
+---
+
+### 7. `react-proptypes-to-prop-types` — **JSSG Outperforms Official Legacy jscodeshift**
+
+This legacy carryover is still useful to track separately, but it is no longer the React 19 recipe step after aligning the recipe with `codemod/commons`.
 
 The legacy counterpart (`React-PropTypes-to-prop-types`) is **not published on the Codemod Registry**, but it does exist in the upstream `reactjs/react-codemod` repo. For this comparison I ran the official transform directly with local `jscodeshift` from a checkout at commit `5207d594fad6f8b39c51fd7edd2bcb51047dc872`.
 
@@ -434,7 +498,7 @@ Treat `react-proptypes-to-prop-types` as directly compared now. The official ups
 
 ---
 
-### 7. Imported Codemods — **Ported into This Branch and Verified**
+### 8. Imported Codemods — **Ported into This Branch and Verified**
 
 The following codemods were originally ported to JSSG on `align-with-legacy-codemods` and imported into the current branch on April 20, 2026, while preserving the six newer superseding codemods already present here:
 
@@ -462,7 +526,7 @@ Post-import verification on this branch:
 Interpretation:
 
 - The branch now carries 20 active JSSG codemods under `codemods/`.
-- The imported 14 codemods are fixture-verified, not yet real-repo certified.
+- The imported 14 codemods are fixture-verified as a group; several now also have targeted real-repo evidence, but the full imported set is not yet uniformly repo-certified.
 - `class` is the only codemod still legacy-only.
 
 ---
@@ -471,7 +535,7 @@ Interpretation:
 
 ### Resolved Regressions
 
-All regressions found during initial testing have been fixed and retested.
+Previously identified regressions were fixed and retested. The later `prop-types-typescript` reevaluation closed the remaining confirmed functional disparities on the sampled repo surface, so the outstanding items below are either intentional safety gaps or already-accepted output-shape differences.
 
 | # | Codemod | Issue | Resolution |
 |---|---------|-------|------------|
@@ -493,6 +557,7 @@ All regressions found during initial testing have been fixed and retested.
 | `replace-act-import` | No action needed — JSSG still wins overall, and `MetaMask` adds an 18-file semantic-parity check |
 | `use-context-hook` | No action needed — zent is byte-identical, cal.com shows a safe extension, and salesforce adds a 6-file JS-side parity spot-check |
 | `replace-string-ref` | No action needed — JSSG outperforms legacy (handles `.jsx` files) |
+| `prop-types-typescript` | No remaining confirmed functional disparity on the sampled repos — JSSG is ahead on coverage (0 `commons`-only files, 12 MetaMask JSSG-only files because `commons` crashes), has zero sampled parse failures, and the remaining output deltas are safe JSSG improvements or non-functional drift |
 | `react-proptypes-to-prop-types` | No action needed — official upstream jscodeshift comparison now exists, and JSSG is stronger on both sampled repo slices |
 | Imported 14 codemods | Branch integration is green. The sampled imported codemods now have stronger repo-based evidence: `error-boundaries` has exact-source parity on `DataTurks`, `react-native-view-prop-types` is safer than legacy on `react-native-snap-carousel`, and `update-react-imports` still needs a cleaner comparison target beyond the current legacy parser failure |
 | `class` | Still legacy-only — no JSSG port exists on this branch yet |

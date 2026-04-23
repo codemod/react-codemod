@@ -1,16 +1,20 @@
 # Side-by-Side Codemod Testing Plan
 
-> Testing `@react-new/*` JSSG codemods vs `reactjs/react-codemod` jscodeshift counterparts on real-world open-source repos.
+> Testing `@react-new/*` JSSG codemods against the relevant legacy or `commons` baselines on real-world open-source repos.
 
 ## Executive Summary
 
-We searched public GitHub repos for the exact code patterns each of our 6 React 19-targeted JSSG codemods targets. Below are the recommended test repos, organized by codemod, with match counts and React version context.
+We searched public GitHub repos for the exact code patterns our tracked React codemods target. Below are the recommended test repos, organized by codemod, with match counts and React version context.
 
 **Key finding:** `useFormState` from `react-dom` has **zero real-world adoption**. No open-source repo imports `useFormState` from `react-dom`. The API was renamed to `useActionState` before it saw meaningful use.
 
 **Additional modern spot-check:** As of 2026-04-17, `calcom/cal.com` redirects to `calcom/cal.diy`. It is a useful React 18/19 TypeScript monorepo target for validating `use-context-hook` and `replace-act-import` on current code.
 
 **Phase 2 import note:** On 2026-04-20, 14 additional JSSG codemods were brought forward from `align-with-legacy-codemods`. These codemods target older or niche migration surfaces, so their immediate validation strategy is fixture-first rather than open-source repo-first. Only `class` remains legacy-only.
+
+**Recipe alignment note (2026-04-23):** The React 19 migration recipe is now aligned with `codemod/commons` and uses `prop-types-typescript` instead of `react-proptypes-to-prop-types`. This plan tracks both codemods for now because the older `React.PropTypes` transform still exists in this repo, but the new recipe-critical step is the inline `propTypes` -> TypeScript migration.
+
+**`prop-types-typescript` reevaluation note (2026-04-23):** The first side-by-side pass against `codemod/commons` is complete. On the sampled real-repo surface, JSSG now has zero `commons`-only files, zero sampled parse failures, and 12 valid JSSG-only MetaMask rewrites because `commons` crashes on those files. `salesforce/design-system-react`, `MetaMask/metamask-extension`, and `atlassian/react-beautiful-dnd` remain the right comparison repos for ongoing regression checks.
 
 **Coverage audit (2026-04-21):** Current upstream `reactjs/react-codemod` `HEAD` is `5207d594fad6f8b39c51fd7edd2bcb51047dc872`. Its `transforms/` directory contains 21 transforms. This repo now has JSSG implementations for 20 of them; the only upstream transform without a JSSG counterpart here is `class`.
 
@@ -112,7 +116,29 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 ---
 
-### 4. `replace-string-ref` — ref="string" → callback ref
+### 4. `prop-types-typescript` — inline `propTypes` → TypeScript props
+
+**Pattern:** `Component.propTypes = { ... }` / `static propTypes = { ... }` → generated `Props` interface + component type annotation, with converted `propTypes` removed or preserved based on options.
+
+Because this codemod targets inline `propTypes` object declarations rather than a unique import token, the best repo selection came from the current React 19 assessment corpus instead of grep.app-wide counts.
+
+| Repo | Matched files | Notes |
+|------|--------------:|-------|
+| **salesforce/design-system-react** | 98 | ★ Strong JS/class-component surface; same repo also stress-tests `replace-reactdom-render` and `use-context-hook` |
+| **MetaMask/metamask-extension** | 275 | ★ Largest real surface in the current corpus; mixed JS component patterns |
+| **atlassian/react-beautiful-dnd** | 2 | Small but clean overlap/parity spot-check |
+| youzan/zent | 0 | No inline `propTypes = {}` surface in current slice |
+| calcom/cal.diy | 0 | No inline `propTypes = {}` surface in current slice |
+
+**Recommended test repos:** `salesforce/design-system-react` + `MetaMask/metamask-extension` + `atlassian/react-beautiful-dnd`
+
+**Comparison baseline:** `codemod/commons/codemods/react/prop-types-typescript`
+
+**Current status:** Initial parity work is complete and the sampled real-repo verdict is now "JSSG ahead". `design-system-react` is effectively at functional parity aside from one non-functional CSS indentation drift and one `commons` crash; `MetaMask` is a stress case where JSSG covers 12 additional real files because `commons` crashes; `react-beautiful-dnd` is a clean 2/2 parity spot-check.
+
+---
+
+### 5. `replace-string-ref` — ref="string" → callback ref
 
 **Pattern:** `ref="myRef"` in JSX inside class components → `ref={(ref) => { this.myRef = ref; }}`
 
@@ -134,7 +160,7 @@ We searched public GitHub repos for the exact code patterns each of our 6 React 
 
 ---
 
-### 5. `use-context-hook` — useContext → use
+### 6. `use-context-hook` — useContext → use
 
 **Pattern:** `useContext(SomeContext)` / `React.useContext(SomeContext)` → `use(SomeContext)`
 
@@ -148,7 +174,7 @@ This pattern is **ubiquitous** — virtually every React application uses `useCo
 
 ---
 
-### 6. `replace-use-form-state` — useFormState → useActionState
+### 7. `replace-use-form-state` — useFormState → useActionState
 
 **Pattern:** `import { useFormState } from 'react-dom'` → `import { useActionState } from 'react'`
 
@@ -162,17 +188,18 @@ This API was renamed to `useActionState` before it saw meaningful public adoptio
 
 ## Recommended Testing Matrix
 
-| Repo | render | act-import | PropTypes | string-ref | useContext | useFormState |
-|------|--------|------------|-----------|------------|------------|--------------|
-| youzan/zent | ✅ ~398 | ✅ ~17 | — | — | ✅ | — |
-| salesforce/design-system-react | ✅ ~315 | — | — | — | ✅ | — |
-| calcom/cal.com (`v6.2.0`) | — | ✅ 1 | — | — | ✅ 30 transformable files | — |
-| MetaMask/metamask-extension | — | ✅ ~18 | — | — | ✅ | — |
-| nylas/nylas-mail | — | — | ✅ ~193 | ✅ ~41 | — | — |
-| azat-co/react-quickly | — | — | ✅ ~155 | ✅ ~120 | — | — |
-| *(synthetic fixtures)* | — | — | — | — | — | ✅ |
+| Repo | render | act-import | React.PropTypes | prop-types-typescript | string-ref | useContext | useFormState |
+|------|--------|------------|-----------------|-----------------------|------------|------------|--------------|
+| youzan/zent | ✅ ~398 | ✅ ~17 | — | — | — | ✅ | — |
+| salesforce/design-system-react | ✅ ~315 | — | — | ✅ 98 matched | — | ✅ | — |
+| calcom/cal.com (`v6.2.0`) | — | ✅ 1 | — | — | — | ✅ 30 transformable files | — |
+| MetaMask/metamask-extension | — | ✅ ~18 | — | ✅ 275 matched | — | ✅ | — |
+| atlassian/react-beautiful-dnd | ✅ | ✅ multiple | — | ✅ 2 matched | — | — | — |
+| nylas/nylas-mail | — | — | ✅ ~193 | — | ✅ ~41 | — | — |
+| azat-co/react-quickly | — | — | ✅ ~155 | — | ✅ ~120 | — | — |
+| *(synthetic fixtures)* | — | — | — | — | — | — | ✅ |
 
-**Minimum repos to cover all 5 viable codemods: 3** (zent + MetaMask + nylas-mail)
+**Minimum repos to cover all 6 viable codemods: 3** (`salesforce/design-system-react` + `MetaMask/metamask-extension` + `azat-co/react-quickly`)
 
 For modern React 18/19 coverage, `calcom/cal.com` is a strong fourth repo even though it is not required for minimum pattern coverage.
 
