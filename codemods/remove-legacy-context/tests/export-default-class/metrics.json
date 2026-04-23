@@ -1,0 +1,10 @@
+{
+  "remove-legacy-context-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/export-default-class/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

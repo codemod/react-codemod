@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/remove-legacy-context"
+version: "0.1.1"
+description: "Remove legacy childContextTypes/getChildContext usage from React class components"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/remove-legacy-context"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "Context", "Legacy"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []
