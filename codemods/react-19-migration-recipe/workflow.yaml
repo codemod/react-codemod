@@ -23,6 +23,6 @@ nodes:
         codemod:
           source: "@react-new/replace-use-form-state"
 
-      - name: "Replace useContext with use"
+      - name: "Convert PropTypes to TypeScript props"
         codemod:
-          source: "@react-new/use-context-hook"
+          source: "@react-new/prop-types-typescript"

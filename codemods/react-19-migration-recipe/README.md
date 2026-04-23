@@ -14,4 +14,4 @@ This recipe applies the following codemods:
 2. [**replace-string-ref**](https://app.codemod.com/registry/@react-new/replace-string-ref) — replace deprecated string refs with callback refs
 3. [**replace-act-import**](https://app.codemod.com/registry/@react-new/replace-act-import) — move `act` from `react-dom/test-utils` to `react`
 4. [**replace-use-form-state**](https://app.codemod.com/registry/@react-new/replace-use-form-state) — rename `useFormState` to `useActionState`
-5. [**use-context-hook**](https://app.codemod.com/registry/@react-new/use-context-hook) — replace `useContext` with `use`
+5. [**prop-types-typescript**](https://app.codemod.com/registry/@react-new/prop-types-typescript) — convert React `propTypes` declarations into TypeScript props interfaces
