@@ -1,0 +1,10 @@
+{
+  "replace-default-props-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/alias-prop/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

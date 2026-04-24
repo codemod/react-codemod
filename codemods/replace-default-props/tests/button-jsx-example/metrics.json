@@ -1,0 +1,10 @@
+{
+  "replace-default-props-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/button-jsx-example/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}
