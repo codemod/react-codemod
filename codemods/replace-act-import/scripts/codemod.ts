@@ -82,6 +82,27 @@ function findNamedActImports(rootNode: SgNode<TSX, "program">): NamedActImport[]
   return imports;
 }
 
+function exportedSpecifierName(specifier: SgNode<TSX>): string | null {
+  const identifiers = specifier.children().filter((child) =>
+    child.isNamed() && child.kind() === "identifier"
+  );
+  return identifiers.at(-1)?.text() ?? null;
+}
+
+function hasActExportFromReact(rootNode: SgNode<TSX, "program">): boolean {
+  for (const exp of rootNode.findAll({ rule: { kind: "export_statement" } })) {
+    if (importSource(exp) !== REACT_MODULE) continue;
+
+    for (const specifier of exp.findAll({ rule: { kind: "export_specifier" } })) {
+      if (exportedSpecifierName(specifier) === "act") {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function getTestUtilsImport(rootNode: SgNode<TSX, "program">): (TestUtilsImport & { importNode?: SgNode<TSX> }) | null {
   const defaultImp = getImport(rootNode, { type: "default", from: TEST_UTILS_MODULE });
   if (defaultImp) {
@@ -262,11 +283,12 @@ const transform: Transform<TSX> = async (root) => {
     },
   });
 
+  const alreadyExportsActFromReact = hasActExportFromReact(rootNode);
   for (const exp of exportDecls) {
     const hasExportAll =
       exp.has({ rule: { kind: "namespace_export" } }) ||
       exp.children().some((c) => c.text() === "*");
-    if (hasExportAll) {
+    if (hasExportAll && !alreadyExportsActFromReact) {
       const insertPos = exp.range().end.index;
       edits.push({
         startPos: insertPos,
