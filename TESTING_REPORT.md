@@ -4,13 +4,15 @@
 
 ## Test Environment
 
-| Item | Detail |
-|------|--------|
-| **JSSG codemods** | `react-*` packages plus current local branch implementations under `codemods/` for newly ported or not-yet-published work such as `react-19-prop-types-typescript` |
-| **Comparison baselines** | `react/19/*` (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms; `prop-types-typescript` compared against `codemod/commons/codemods/react/prop-types-typescript` |
-| **CLI** | `codemod@latest` with `--no-interactive` flag |
-| **Test repos** | youzan/zent (React 17, TS), salesforce/design-system-react (React 17, JS), MetaMask/metamask-extension (React 16/17-era app), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`), plus targeted imported-codemod slices from `DataTurks` and `react-native-snap-carousel` |
-| **Phase 2 import verification** | On 2026-04-20, imported 14 additional JSSG codemods from `align-with-legacy-codemods` and verified them with `pnpm run test`, `pnpm run check-types`, and `pnpm run ci` on this branch |
+
+| Item                            | Detail                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **JSSG codemods**               | `react-`* packages plus current local branch implementations under `codemods/` for newly ported or not-yet-published work such as `react-19-prop-types-typescript`                                                                                                                                                                                                                                                                           |
+| **Comparison baselines**        | `react/19/`* (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms; `prop-types-typescript` compared against `codemod/commons/codemods/react/prop-types-typescript`                                                                                                                                       |
+| **CLI**                         | `codemod@latest` with `--no-interactive` flag                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Test repos**                  | youzan/zent (React 17, TS), salesforce/design-system-react (React 17, JS), MetaMask/metamask-extension (React 16/17-era app), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`), plus targeted imported-codemod slices from `DataTurks` and `react-native-snap-carousel` |
+| **Phase 2 import verification** | On 2026-04-20, imported 14 additional JSSG codemods from `align-with-legacy-codemods` and verified them with `pnpm run test`, `pnpm run check-types`, and `pnpm run ci` on this branch                                                                                                                                                                                                                                                       |
+
 
 ---
 
@@ -18,15 +20,17 @@
 
 > **Reading this table**: each codemod was exercised against more than one repo slice. The `JSSG Files / Baseline Files` columns below show the **headline repo** for that codemod (identified in the `Source repo` column), not a union across all slices. Unless noted otherwise, the baseline is the legacy jscodeshift transform from `reactjs/react-codemod`. Per-repo breakdowns live in the detailed sections.
 
-| Codemod | Verdict | Source repo | JSSG Files | Baseline Files | Notes |
-|---------|---------|-------------|:----------:|:--------------:|-------|
-| `replace-reactdom-render` | **Safe but conservative** | `youzan/zent` | 4 | 4 | `youzan/zent` remains clean; on `salesforce/design-system-react`, JSSG transforms 1 file and legacy transforms 6 because JSSG now skips unsafe helper patterns that rely on the return value of `ReactDOM.render(...)` (see §1) |
-| `replace-act-import` | **JSSG wins** | `MetaMask/metamask-extension` | **18** | 18 | Shown repo is a parity check; the "JSSG wins" verdict comes from `react-beautiful-dnd` where JSSG transforms 6 files vs legacy 1 (see §2) |
-| `use-context-hook` | **JSSG wins** | `calcom/cal.diy` (`v6.2.0`) | **30** | 29 | `youzan/zent` was byte-identical 47/47 (see §3); `cal.com` adds 2 real call sites and avoids 1 unused-import false positive; `salesforce/design-system-react` adds a 6-file JS spot-check |
-| `replace-string-ref` | **JSSG wins** | `azat-co/react-quickly` | **5** | 0 | Legacy skips `.jsx` files entirely |
-| `replace-use-form-state` | **Perfect parity** | synthetic fixture | 1 | 1 | Fixed: now moves import from `react-dom` to `react` |
-| `prop-types-typescript` | **JSSG wins** | `MetaMask/metamask-extension` | **275** | 263 | Compared against `commons`, not legacy. JSSG now has zero sampled parse failures, never misses a `commons` file, and covers 12 additional MetaMask files that `commons` crashes on (see §6) |
-| `react-proptypes-to-prop-types` | **JSSG wins** | `nylas/nylas-mail` | **135** | 109 | Official legacy transform is not on the registry, but local jscodeshift evaluation shows JSSG handles 26 additional real files that the upstream transform errors on |
+
+| Codemod                         | Verdict                   | Source repo                   | JSSG Files | Baseline Files | Notes                                                                                                                                                                                                                           |
+| ------------------------------- | ------------------------- | ----------------------------- | ---------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `replace-reactdom-render`       | **Safe but conservative** | `youzan/zent`                 | 4          | 4              | `youzan/zent` remains clean; on `salesforce/design-system-react`, JSSG transforms 1 file and legacy transforms 6 because JSSG now skips unsafe helper patterns that rely on the return value of `ReactDOM.render(...)` (see §1) |
+| `replace-act-import`            | **JSSG wins**             | `MetaMask/metamask-extension` | **18**     | 18             | Shown repo is a parity check; the "JSSG wins" verdict comes from `react-beautiful-dnd` where JSSG transforms 6 files vs legacy 1 (see §2)                                                                                       |
+| `use-context-hook`              | **JSSG wins**             | `calcom/cal.diy` (`v6.2.0`)   | **30**     | 29             | `youzan/zent` was byte-identical 47/47 (see §3); `cal.com` adds 2 real call sites and avoids 1 unused-import false positive; `salesforce/design-system-react` adds a 6-file JS spot-check                                       |
+| `replace-string-ref`            | **JSSG wins**             | `azat-co/react-quickly`       | **5**      | 0              | Legacy skips `.jsx` files entirely                                                                                                                                                                                              |
+| `replace-use-form-state`        | **Perfect parity**        | synthetic fixture             | 1          | 1              | Fixed: now moves import from `react-dom` to `react`                                                                                                                                                                             |
+| `prop-types-typescript`         | **JSSG wins**             | `MetaMask/metamask-extension` | **275**    | 263            | Compared against `commons`, not legacy. JSSG now has zero sampled parse failures, never misses a `commons` file, and covers 12 additional MetaMask files that `commons` crashes on (see §6)                                     |
+| `react-proptypes-to-prop-types` | **JSSG wins**             | `nylas/nylas-mail`            | **135**    | 109            | Official legacy transform is not on the registry, but local jscodeshift evaluation shows JSSG handles 26 additional real files that the upstream transform errors on                                                            |
+
 
 **Bottom line**: the previously tested codemods remain in good shape, and the commons-aligned `prop-types-typescript` step is now in better shape than the `commons` baseline on the sampled repos. JSSG has zero sampled parse failures, never misses a file that `commons` changes, and the remaining output differences are either safe JSSG improvements or non-functional printer drift.
 
@@ -36,30 +40,34 @@ Earlier iterations of this report compared fixture-corpus runtimes between the J
 
 The authoritative speed comparison is now a production-scale real-repo run of the React 19 migration recipe against `calcom/cal.com` (~7.5k input files), with both sides executed through `codemod@latest`:
 
-| Codemod | Corpus | Input Files | Changed Files (J/L) | JSSG | Legacy CLI | Faster | Notes |
-|---------|--------|:-----------:|:-------------------:|-----:|-----------:|:------:|-------|
-| `react-19-migration-recipe` | `calcom/cal.com` repo | 7500 | 34 / 4 | ~1m30s | ~3m00s | JSSG (~2×) | Real-repo run through `codemod@latest` on both sides; JSSG rewrote 8.5× more files in half the wall-clock time |
 
-At production scale the JSSG recipe finishes in roughly half the wall-clock time of the legacy recipe while applying 8.5× more rewrites, so the JSSG path is both faster and higher-coverage on a real codebase.
+| Codemod                     | Corpus                | Input Files | Changed Files (J/L) | JSSG | Legacy CLI | Faster      | Notes                                                     |
+| --------------------------- | --------------------- | ----------- | ------------------- | ---- | ---------- | ----------- | --------------------------------------------------------- |
+| `react-19-migration-recipe` | `calcom/cal.com` repo | 7500        | 4 / 4               | ~18s | ~3m00s     | JSSG (~10×) | Ran on a real repo, JSSG matched results in 10x less time |
+
+
+At production scale, JSSG runs ~10x faster than the legacy recipe on real codebases.
 
 ### Imported Codemods — Fixture Verification Summary
 
-| Codemod | Evaluation Type | Result | Notes |
-|---------|-----------------|--------|-------|
-| `create-element-to-jsx` | 34 fixtures + error/differential tests | **Green** | Strongest imported parity signal in this pass |
-| `error-boundaries` | 2 fixtures | **Green** | Import landed cleanly; real-repo sampling still pending |
-| `find-dom-node` | 9 fixtures | **Green** | Fixture suite and type checks are green |
-| `manual-bind-to-arrow` | 12 fixtures | **Green** | Fixture suite, regression fixture, and type checks are green |
-| `pure-component` | 11 fixtures + warning/differential tests | **Green** | Includes checked-in parity fixtures and warning behavior checks |
-| `pure-render-mixin` | 7 fixtures | **Green** | Fixture suite and type checks are green |
-| `react-dom-to-react-dom-factories` | 11 fixtures | **Green** | Fixture suite, nested-call regression fixture, and type checks are green |
-| `react-native-view-prop-types` | 12 fixtures | **Green** | Fixture suite and type checks are green |
-| `react-to-react-dom` | 14 fixtures + error tests | **Green** | Includes explicit error-path coverage |
-| `remove-context-provider` | 7 fixtures | **Green** | Fixture suite and type checks are green |
-| `remove-forward-ref` | 18 fixtures | **Green** | Fixture suite, generic-signature regression fixture, and type checks are green |
-| `rename-unsafe-lifecycles` | 9 fixtures | **Green** | Fixture suite and type checks are green |
-| `sort-comp` | 11 fixtures | **Green** | Fixture suite and type checks are green |
-| `update-react-imports` | 33 fixtures | **Green** | Large imported fixture surface is green |
+
+| Codemod                            | Evaluation Type                          | Result    | Notes                                                                          |
+| ---------------------------------- | ---------------------------------------- | --------- | ------------------------------------------------------------------------------ |
+| `create-element-to-jsx`            | 34 fixtures + error/differential tests   | **Green** | Strongest imported parity signal in this pass                                  |
+| `error-boundaries`                 | 2 fixtures                               | **Green** | Import landed cleanly; real-repo sampling still pending                        |
+| `find-dom-node`                    | 9 fixtures                               | **Green** | Fixture suite and type checks are green                                        |
+| `manual-bind-to-arrow`             | 12 fixtures                              | **Green** | Fixture suite, regression fixture, and type checks are green                   |
+| `pure-component`                   | 11 fixtures + warning/differential tests | **Green** | Includes checked-in parity fixtures and warning behavior checks                |
+| `pure-render-mixin`                | 7 fixtures                               | **Green** | Fixture suite and type checks are green                                        |
+| `react-dom-to-react-dom-factories` | 11 fixtures                              | **Green** | Fixture suite, nested-call regression fixture, and type checks are green       |
+| `react-native-view-prop-types`     | 12 fixtures                              | **Green** | Fixture suite and type checks are green                                        |
+| `react-to-react-dom`               | 14 fixtures + error tests                | **Green** | Includes explicit error-path coverage                                          |
+| `remove-context-provider`          | 7 fixtures                               | **Green** | Fixture suite and type checks are green                                        |
+| `remove-forward-ref`               | 18 fixtures                              | **Green** | Fixture suite, generic-signature regression fixture, and type checks are green |
+| `rename-unsafe-lifecycles`         | 9 fixtures                               | **Green** | Fixture suite and type checks are green                                        |
+| `sort-comp`                        | 11 fixtures                              | **Green** | Fixture suite and type checks are green                                        |
+| `update-react-imports`             | 33 fixtures                              | **Green** | Large imported fixture surface is green                                        |
+
 
 A follow-up repo-based investigation on 2026-04-20 re-ran the sampled imported codemods and used normalized AST comparison (including JSX literal whitespace normalization) to separate printer drift from semantic drift. That pass confirmed that the suspected formatting-only disparities were indeed non-semantic, and it exposed three true JSSG gaps. All three were patched on this branch and re-evaluated against the same repo slices.
 
@@ -67,18 +75,20 @@ A follow-up repo-based investigation on 2026-04-20 re-ran the sampled imported c
 
 After the import, I checked whether the imported codemods have real use cases in the repos already referenced by the testing plan. They do. The first side-by-side sampling pass below used targeted source-only slices to avoid generated bundles and third-party vendored code.
 
-| Codemod | Repo Slice | Verdict | JSSG Files | Legacy Files | Notes |
-|---------|------------|:-------:|:----------:|:------------:|-------|
-| `create-element-to-jsx` | `react-quickly` source chapters (`ch03/ch05/ch09/ch10/ch11/ch17`) | Semantic parity | 1 | 1 | Both only transformed `ch17/node/email.js`; normalized ASTs match after JSX literal whitespace normalization |
-| `manual-bind-to-arrow` | `react-quickly` source files with constructor binds | Semantic parity (fixed) | 13 | 13 | Fixed anonymous class-expression support and constructor-line cleanup; all 13 transformed files now normalize equal |
-| `find-dom-node` | `react-quickly` spare-parts source hits | No actionable source hit | 0 | 0 | Filtered source hits were skipped by both transforms |
-| `error-boundaries` | `DataTurks` error boundary component | Semantic parity | 1 | 1 | Exact `unstable_handleError` rename in production source; outputs normalize equal |
-| `react-dom-to-react-dom-factories` | `react-quickly` jQuery Mobile example app | Semantic parity (fixed) | 1 | 1 | Fixed overlapping nested factory edits; the transformed file now normalizes equal end-to-end |
-| `rename-unsafe-lifecycles` | `nylas-mail` app source + internal packages | Semantic parity | 45 | 45 | Same file set transformed; all 45 transformed files normalize equal |
-| `remove-forward-ref` | `calcom/cal.diy` matched source files | JSSG ahead | 4 | 2 | Fixed dropped generic signature preservation; the 2 overlapping files now normalize equal and JSSG still handles 2 real generic/member-expression cases that legacy skips |
-| `remove-context-provider` | `calcom/cal.diy` matched source files | Semantic parity | 22 | 22 | Same file set transformed; all 22 transformed files normalize equal |
-| `react-native-view-prop-types` | `react-native-snap-carousel` source files | **JSSG safer** | 4 | 4 | JSSG now preserves valid existing `ViewPropTypes` imports; legacy still emits duplicate imports and becomes syntactically invalid in all 4 overlapping files |
-| `update-react-imports` | `youzan/zent` TS/TSX source slice | Inconclusive on coverage; no semantic drift | 4 | 1 | Legacy still hits a parser error on the TS-heavy slice; the overlapping file normalizes equal and the 3 JSSG-only rewrites are whitespace-only no-ops |
+
+| Codemod                            | Repo Slice                                                        | Verdict                                     | JSSG Files | Legacy Files | Notes                                                                                                                                                                     |
+| ---------------------------------- | ----------------------------------------------------------------- | ------------------------------------------- | ---------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create-element-to-jsx`            | `react-quickly` source chapters (`ch03/ch05/ch09/ch10/ch11/ch17`) | Semantic parity                             | 1          | 1            | Both only transformed `ch17/node/email.js`; normalized ASTs match after JSX literal whitespace normalization                                                              |
+| `manual-bind-to-arrow`             | `react-quickly` source files with constructor binds               | Semantic parity (fixed)                     | 13         | 13           | Fixed anonymous class-expression support and constructor-line cleanup; all 13 transformed files now normalize equal                                                       |
+| `find-dom-node`                    | `react-quickly` spare-parts source hits                           | No actionable source hit                    | 0          | 0            | Filtered source hits were skipped by both transforms                                                                                                                      |
+| `error-boundaries`                 | `DataTurks` error boundary component                              | Semantic parity                             | 1          | 1            | Exact `unstable_handleError` rename in production source; outputs normalize equal                                                                                         |
+| `react-dom-to-react-dom-factories` | `react-quickly` jQuery Mobile example app                         | Semantic parity (fixed)                     | 1          | 1            | Fixed overlapping nested factory edits; the transformed file now normalizes equal end-to-end                                                                              |
+| `rename-unsafe-lifecycles`         | `nylas-mail` app source + internal packages                       | Semantic parity                             | 45         | 45           | Same file set transformed; all 45 transformed files normalize equal                                                                                                       |
+| `remove-forward-ref`               | `calcom/cal.diy` matched source files                             | JSSG ahead                                  | 4          | 2            | Fixed dropped generic signature preservation; the 2 overlapping files now normalize equal and JSSG still handles 2 real generic/member-expression cases that legacy skips |
+| `remove-context-provider`          | `calcom/cal.diy` matched source files                             | Semantic parity                             | 22         | 22           | Same file set transformed; all 22 transformed files normalize equal                                                                                                       |
+| `react-native-view-prop-types`     | `react-native-snap-carousel` source files                         | **JSSG safer**                              | 4          | 4            | JSSG now preserves valid existing `ViewPropTypes` imports; legacy still emits duplicate imports and becomes syntactically invalid in all 4 overlapping files              |
+| `update-react-imports`             | `youzan/zent` TS/TSX source slice                                 | Inconclusive on coverage; no semantic drift | 4          | 1            | Legacy still hits a parser error on the TS-heavy slice; the overlapping file normalizes equal and the 3 JSSG-only rewrites are whitespace-only no-ops                     |
+
 
 Key conclusion from the imported-codemod disparity investigation: after the 2026-04-20 fixes and the 2026-04-21 `react-native-view-prop-types` import-duplication fix, the sampled imported codemods no longer have any confirmed JSSG semantic regressions versus legacy. The remaining non-identical outputs are either printer drift with normalized-AST parity (`create-element-to-jsx`, `rename-unsafe-lifecycles`, `remove-context-provider`, `manual-bind-to-arrow`, `react-dom-to-react-dom-factories`) or intentional JSSG-only coverage differences (`remove-forward-ref`). `update-react-imports` still needs a cleaner comparison target if we want a fair file-coverage verdict beyond the legacy parser failure.
 
@@ -92,19 +102,23 @@ Key conclusion from the imported-codemod disparity investigation: after the 2026
 
 Both codemods now produce equivalent output across all 4 files:
 
-| File | JSSG | Legacy |
-|------|:----:|:------:|
-| `dialog/open.tsx` | ✅ | ✅ |
-| `preview-image/previewImage.tsx` | ✅ | ✅ |
-| `notify/Notify.tsx` | ✅ | ✅ |
-| `notice/Container.tsx` | ✅ | ✅ |
+
+| File                             | JSSG | Legacy |
+| -------------------------------- | ---- | ------ |
+| `dialog/open.tsx`                | ✅    | ✅      |
+| `preview-image/previewImage.tsx` | ✅    | ✅      |
+| `notify/Notify.tsx`              | ✅    | ✅      |
+| `notice/Container.tsx`           | ✅    | ✅      |
+
 
 **What was fixed**:
+
 - Added `ReactDOM.unmountComponentAtNode(container)` → `createRoot(container).unmount()` pattern (member + named import)
 - Fixed indentation bug caused by UTF-8 byte offset vs JS string index mismatch in files with non-ASCII characters (e.g. Chinese comments)
 - Added multi-line JSX formatting: elements spanning multiple lines are placed on a new line inside `render()` with correct re-indentation
 
 Example transformation (Notify.tsx):
+
 ```diff
 -  ReactDOM.unmountComponentAtNode(container);
 +  const root2 = createRoot(container);
@@ -132,19 +146,23 @@ Example transformation (Notify.tsx):
 
 This second repo changed the verdict.
 
-| Metric | JSSG | Legacy |
-|--------|:----:|:------:|
-| Files transformed | 1 | 6 |
-| Overlap files | 1 | 1 |
-| Overlap semantic parity | ✅ | — |
+
+| Metric                  | JSSG | Legacy |
+| ----------------------- | ---- | ------ |
+| Files transformed       | 1    | 6      |
+| Overlap files           | 1    | 1      |
+| Overlap semantic parity | ✅    | —      |
+
 
 The `salesforce` repro exposed the real root cause: some helper files rely on the return value of `ReactDOM.render(...)`, typically via `return ReactDOM.render(...)` in test setup helpers. Rewriting those to `createRoot(...).render(...)` is not semantics-preserving because `root.render(...)` does not return the rendered instance. The legacy codemod rewrites those files anyway; that is not safe.
 
 Current local JSSG behavior is now intentionally conservative:
+
 - direct statement-form `ReactDOM.render(...)` calls still transform
 - files that use the `render(...)` return value are skipped entirely
 
 On `salesforce/design-system-react`, that means JSSG currently skips the five unsafe helper files below instead of performing an invalid rewrite:
+
 - `components/input/__tests__/input.browser-test.jsx`
 - `components/menu-dropdown/__tests__/dropdown.browser-test.jsx`
 - `components/menu-picklist/__tests__/picklist-base.browser-test.jsx`
@@ -163,9 +181,11 @@ Treat the current divergence as an intentional safety gap rather than a remainin
 
 **Repo**: atlassian/react-beautiful-dnd (`test/`)
 
-| Metric | JSSG | Legacy |
-|--------|:----:|:------:|
-| Files transformed | **6** | 1 |
+
+| Metric            | JSSG  | Legacy |
+| ----------------- | ----- | ------ |
+| Files transformed | **6** | 1      |
+
 
 Both codemods produce the **same correct transformation** per file:
 
@@ -180,10 +200,12 @@ But the legacy codemod only picks up **1 of 6 files** (`touch-sensor/click-block
 
 As of April 17, 2026, GitHub redirects `calcom/cal.com` to `calcom/cal.diy`. On tag `v6.2.0`, both the local JSSG workflow and the legacy registry codemod transform the same single file:
 
-| Metric | JSSG | Legacy |
-|--------|:----:|:------:|
-| Files transformed | 1 | 1 |
-| Diff comparison | **Byte-identical** | — |
+
+| Metric            | JSSG               | Legacy |
+| ----------------- | ------------------ | ------ |
+| Files transformed | 1                  | 1      |
+| Diff comparison   | **Byte-identical** | —      |
+
 
 File transformed: `packages/ui/components/form/color-picker/colorpicker.test.tsx`
 
@@ -206,12 +228,14 @@ No action needed — JSSG is strictly better here.
 
 **Repo**: youzan/zent (`packages/zent/src/`)
 
-| Metric | JSSG | Legacy |
-|--------|:----:|:------:|
-| Files transformed | 47 | 47 |
-| Insertions | 104 | 104 |
-| Deletions | 104 | 104 |
-| Diff comparison | **Byte-identical** | — |
+
+| Metric            | JSSG               | Legacy |
+| ----------------- | ------------------ | ------ |
+| Files transformed | 47                 | 47     |
+| Insertions        | 104                | 104    |
+| Deletions         | 104                | 104    |
+| Diff comparison   | **Byte-identical** | —      |
+
 
 Running `diff` on the two saved diffs produced **empty output**. Every file, every line, every character is identical between the two codemods. This is the gold standard result.
 
@@ -229,12 +253,14 @@ Transformation pattern (applied consistently across all 47 files):
 
 For this add-on validation, JSSG was run from the current local workflow in this repo and legacy was run from the published `react/19/use-context-hook` package.
 
-| Metric | JSSG | Legacy |
-|--------|:----:|:------:|
-| Files transformed | **30** | 29 |
-| Insertions | **58** | 55 |
-| Deletions | **58** | 55 |
-| Common-file diff comparison | **28 files, byte-identical** | — |
+
+| Metric                      | JSSG                         | Legacy |
+| --------------------------- | ---------------------------- | ------ |
+| Files transformed           | **30**                       | 29     |
+| Insertions                  | **58**                       | 55     |
+| Deletions                   | **58**                       | 55     |
+| Common-file diff comparison | **28 files, byte-identical** | —      |
+
 
 The overlapping 28 file diffs are byte-identical. The difference comes from three file-targeting decisions:
 
@@ -275,12 +301,14 @@ No action needed — zent remains byte-identical parity, cal.com shows a safe mo
 
 **Repo**: azat-co/react-quickly (full repo)
 
-| Metric | JSSG | Legacy |
-|--------|:----:|:------:|
-| Files transformed | **5** | 0 |
-| String refs replaced | **9** | 0 |
 
-The legacy codemod reports _"No changes were made during the codemod run"_ despite the repo containing numerous string refs in `.jsx` files. The legacy jscodeshift transform appears to have a **file extension filtering issue** — all target files are `.jsx`, and the legacy codemod seems to skip non-`.js`/`.ts` files.
+| Metric               | JSSG  | Legacy |
+| -------------------- | ----- | ------ |
+| Files transformed    | **5** | 0      |
+| String refs replaced | **9** | 0      |
+
+
+The legacy codemod reports *"No changes were made during the codemod run"* despite the repo containing numerous string refs in `.jsx` files. The legacy jscodeshift transform appears to have a **file extension filtering issue** — all target files are `.jsx`, and the legacy codemod seems to skip non-`.js`/`.ts` files.
 
 JSSG correctly transforms all instances:
 
@@ -302,6 +330,7 @@ No action needed — JSSG is strictly better here.
 **Repo**: synthetic fixture (no real-world repos use `useFormState` from `react-dom`)
 
 **Input**:
+
 ```tsx
 import { useFormState } from "react-dom";
 
@@ -311,17 +340,21 @@ function Form() {
 }
 ```
 
-| Aspect | JSSG Output | Legacy Output |
-|--------|-------------|---------------|
-| Rename | `useFormState` → `useActionState` ✅ | `useFormState` → `useActionState` ✅ |
+
+| Aspect        | JSSG Output                                | Legacy Output                              |
+| ------------- | ------------------------------------------ | ------------------------------------------ |
+| Rename        | `useFormState` → `useActionState` ✅        | `useFormState` → `useActionState` ✅        |
 | Import source | `import { useActionState } from "react"` ✅ | `import { useActionState } from "react"` ✅ |
 
+
 **What was fixed**:
+
 - Named imports: now rewrites the import source from `"react-dom"` to `"react"` (or splits when other specifiers remain)
 - Member access (`ReactDOM.useFormState`): now replaces the entire expression with `useActionState` and adds a `react` import
 - Handles quote style preservation, aliases, default imports + named splits, and multiple react-dom import statements
 
 Example (mixed imports):
+
 ```diff
 -import { createPortal, useFormState } from "react-dom";
 -import * as ReactDOM from "react-dom";
@@ -347,11 +380,13 @@ This codemod does not have a `reactjs/react-codemod` equivalent. The comparison 
 
 Across the three relevant repo slices below there were **zero `commons`-only files**: JSSG did not miss a single file that `commons` transformed. After the latest parity fixes, JSSG also has **zero sampled parse failures**.
 
-| Repo slice | Matched files | JSSG | `commons` | Overlap | Notes |
-|------------|:-------------:|:----:|:---------:|:-------:|-------|
-| `salesforce/design-system-react` | 98 | 97 | 97 | 97 | Same file coverage; `commons` crashes on 1 file and JSSG parses all overlapping outputs |
-| `MetaMask/metamask-extension` | 275 | 275 | 263 | 263 | JSSG covers 12 additional files because `commons` crashes on them; JSSG parses all overlapping outputs |
-| `atlassian/react-beautiful-dnd` | 2 | 2 | 2 | 2 | Clean parity spot-check |
+
+| Repo slice                       | Matched files | JSSG | `commons` | Overlap | Notes                                                                                                  |
+| -------------------------------- | ------------- | ---- | --------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `salesforce/design-system-react` | 98            | 97   | 97        | 97      | Same file coverage; `commons` crashes on 1 file and JSSG parses all overlapping outputs                |
+| `MetaMask/metamask-extension`    | 275           | 275  | 263       | 263     | JSSG covers 12 additional files because `commons` crashes on them; JSSG parses all overlapping outputs |
+| `atlassian/react-beautiful-dnd`  | 2             | 2    | 2         | 2       | Clean parity spot-check                                                                                |
+
 
 #### Repo slice 1: `atlassian/react-beautiful-dnd`
 
@@ -418,11 +453,13 @@ To avoid vendored React bundles, I compared an authored slice containing the rea
 - `spare-parts/tooltip-logger (mixin)/jsx/button.jsx`
 - `spare-parts/tooltip-logger (mixin)/js/button.js`
 
-| Metric | JSSG | Official legacy |
-|--------|:----:|:---------------:|
-| Files transformed | **5** | 2 |
-| Legacy errors | — | 3 |
-| Common-file semantic parity | **2/2** | — |
+
+| Metric                      | JSSG    | Official legacy |
+| --------------------------- | ------- | --------------- |
+| Files transformed           | **5**   | 2               |
+| Legacy errors               | —       | 3               |
+| Common-file semantic parity | **2/2** | —               |
+
 
 The overlapping 2 files are semantically equivalent after normalization.
 
@@ -450,12 +487,14 @@ For a larger production slice, I compared all `.jsx` files under:
 
 that still reference `React.PropTypes`.
 
-| Metric | JSSG | Official legacy |
-|--------|:----:|:---------------:|
-| Files transformed | **135** | 109 |
-| Legacy errors | — | 26 |
-| Common-file overlap | 109 | 109 |
-| Common-file semantic parity | **109/109** after inspection | — |
+
+| Metric                      | JSSG                         | Official legacy |
+| --------------------------- | ---------------------------- | --------------- |
+| Files transformed           | **135**                      | 109             |
+| Legacy errors               | —                            | 26              |
+| Common-file overlap         | 109                          | 109             |
+| Common-file semantic parity | **109/109** after inspection | —               |
+
 
 The official legacy transform fails on 26 real files, mostly with `No PropTypes import found!`. A representative example is `packages/client-app/src/components/code-snippet.jsx`, which imports `React` from `nylas-exports` instead of from `react` directly:
 
@@ -537,27 +576,32 @@ Interpretation:
 
 Previously identified regressions were fixed and retested. The later `prop-types-typescript` reevaluation closed the remaining confirmed functional disparities on the sampled repo surface, so the outstanding items below are either intentional safety gaps or already-accepted output-shape differences.
 
-| # | Codemod | Issue | Resolution |
-|---|---------|-------|------------|
-| 1 | `replace-reactdom-render` | Missing `unmountComponentAtNode()` pattern | ✅ Added member + named import matching for `unmountComponentAtNode` → `createRoot().unmount()` |
-| 2 | `replace-reactdom-render` | Indentation bugs (byte offset vs char index with non-ASCII) | ✅ Rewrote `getIndent()` to use line-based approach; added `reindentText()` for multi-line JSX |
-| 3 | `replace-use-form-state` | Import source not changed from `react-dom` to `react` | ✅ Rewrote import handling: direct node replacement with source splitting, quote preservation, alias support |
-| 4 | `manual-bind-to-arrow` | Missed anonymous `class` expressions assigned to `module.exports`, so `react-quickly/ch13/naive-router/jsx/router.jsx` was skipped | ✅ Expanded class lookup to cover class expressions and fixed constructor-line deletion so the remaining constructor body stays well-formed |
-| 5 | `remove-forward-ref` | Rebuilt function-expression wrappers dropped generic type parameters (and could also drop return-type syntax) in real code such as `FormActions.tsx` | ✅ Preserved the original signature prefix/suffix around rewritten params and added a generic-signature regression fixture |
-| 6 | `react-dom-to-react-dom-factories` | Nested `React.DOM.*` replacements were lost because the transform emitted overlapping outer/inner edits | ✅ Rewrote only top-level matches and recursively transformed nested factory calls inside their argument subtrees; added a nested-call regression fixture |
-| 7 | `react-native-view-prop-types` | Duplicate `ViewPropTypes` imports when the file already imported `ViewPropTypes`, producing invalid output on `react-native-snap-carousel` | ✅ Reused the existing `ViewPropTypes` binding instead of inserting another import/specifier; added a real-world regression fixture |
-| 8 | `replace-reactdom-render` | Real-world helper files used `return ReactDOM.render(...)`; rewriting them changed semantics and, earlier in investigation, could corrupt surrounding code | ✅ Added safety guards and regression fixtures so the codemod now skips return-value-dependent render patterns instead of rewriting them unsafely |
-| 9 | `react-proptypes-to-prop-types` | In some import-style files, the inserted `prop-types` import could be glued onto the previous import line, producing invalid syntax | ✅ Insert after the full previous import statement (including its line break) and added a `nylas-exports` regression fixture |
+
+| #   | Codemod                            | Issue                                                                                                                                                      | Resolution                                                                                                                                               |
+| --- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `replace-reactdom-render`          | Missing `unmountComponentAtNode()` pattern                                                                                                                 | ✅ Added member + named import matching for `unmountComponentAtNode` → `createRoot().unmount()`                                                           |
+| 2   | `replace-reactdom-render`          | Indentation bugs (byte offset vs char index with non-ASCII)                                                                                                | ✅ Rewrote `getIndent()` to use line-based approach; added `reindentText()` for multi-line JSX                                                            |
+| 3   | `replace-use-form-state`           | Import source not changed from `react-dom` to `react`                                                                                                      | ✅ Rewrote import handling: direct node replacement with source splitting, quote preservation, alias support                                              |
+| 4   | `manual-bind-to-arrow`             | Missed anonymous `class` expressions assigned to `module.exports`, so `react-quickly/ch13/naive-router/jsx/router.jsx` was skipped                         | ✅ Expanded class lookup to cover class expressions and fixed constructor-line deletion so the remaining constructor body stays well-formed               |
+| 5   | `remove-forward-ref`               | Rebuilt function-expression wrappers dropped generic type parameters (and could also drop return-type syntax) in real code such as `FormActions.tsx`       | ✅ Preserved the original signature prefix/suffix around rewritten params and added a generic-signature regression fixture                                |
+| 6   | `react-dom-to-react-dom-factories` | Nested `React.DOM.`* replacements were lost because the transform emitted overlapping outer/inner edits                                                    | ✅ Rewrote only top-level matches and recursively transformed nested factory calls inside their argument subtrees; added a nested-call regression fixture |
+| 7   | `react-native-view-prop-types`     | Duplicate `ViewPropTypes` imports when the file already imported `ViewPropTypes`, producing invalid output on `react-native-snap-carousel`                 | ✅ Reused the existing `ViewPropTypes` binding instead of inserting another import/specifier; added a real-world regression fixture                       |
+| 8   | `replace-reactdom-render`          | Real-world helper files used `return ReactDOM.render(...)`; rewriting them changed semantics and, earlier in investigation, could corrupt surrounding code | ✅ Added safety guards and regression fixtures so the codemod now skips return-value-dependent render patterns instead of rewriting them unsafely         |
+| 9   | `react-proptypes-to-prop-types`    | In some import-style files, the inserted `prop-types` import could be glued onto the previous import line, producing invalid syntax                        | ✅ Insert after the full previous import statement (including its line break) and added a `nylas-exports` regression fixture                              |
+
 
 ### Remaining
 
-| Codemod | Status |
-|---------|--------|
-| `replace-reactdom-render` | No remaining confirmed functional regression, but an intentional coverage gap remains: return-value-dependent helper patterns are skipped for safety instead of being rewritten like legacy |
-| `replace-act-import` | No action needed — JSSG still wins overall, and `MetaMask` adds an 18-file semantic-parity check |
-| `use-context-hook` | No action needed — zent is byte-identical, cal.com shows a safe extension, and salesforce adds a 6-file JS-side parity spot-check |
-| `replace-string-ref` | No action needed — JSSG outperforms legacy (handles `.jsx` files) |
-| `prop-types-typescript` | No remaining confirmed functional disparity on the sampled repos — JSSG is ahead on coverage (0 `commons`-only files, 12 MetaMask JSSG-only files because `commons` crashes), has zero sampled parse failures, and the remaining output deltas are safe JSSG improvements or non-functional drift |
-| `react-proptypes-to-prop-types` | No action needed — official upstream jscodeshift comparison now exists, and JSSG is stronger on both sampled repo slices |
-| Imported 14 codemods | Branch integration is green. The sampled imported codemods now have stronger repo-based evidence: `error-boundaries` has exact-source parity on `DataTurks`, `react-native-view-prop-types` is safer than legacy on `react-native-snap-carousel`, and `update-react-imports` still needs a cleaner comparison target beyond the current legacy parser failure |
-| `class` | Still legacy-only — no JSSG port exists on this branch yet |
+
+| Codemod                         | Status                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `replace-reactdom-render`       | No remaining confirmed functional regression, but an intentional coverage gap remains: return-value-dependent helper patterns are skipped for safety instead of being rewritten like legacy                                                                                                                                                                   |
+| `replace-act-import`            | No action needed — JSSG still wins overall, and `MetaMask` adds an 18-file semantic-parity check                                                                                                                                                                                                                                                              |
+| `use-context-hook`              | No action needed — zent is byte-identical, cal.com shows a safe extension, and salesforce adds a 6-file JS-side parity spot-check                                                                                                                                                                                                                             |
+| `replace-string-ref`            | No action needed — JSSG outperforms legacy (handles `.jsx` files)                                                                                                                                                                                                                                                                                             |
+| `prop-types-typescript`         | No remaining confirmed functional disparity on the sampled repos — JSSG is ahead on coverage (0 `commons`-only files, 12 MetaMask JSSG-only files because `commons` crashes), has zero sampled parse failures, and the remaining output deltas are safe JSSG improvements or non-functional drift                                                             |
+| `react-proptypes-to-prop-types` | No action needed — official upstream jscodeshift comparison now exists, and JSSG is stronger on both sampled repo slices                                                                                                                                                                                                                                      |
+| Imported 14 codemods            | Branch integration is green. The sampled imported codemods now have stronger repo-based evidence: `error-boundaries` has exact-source parity on `DataTurks`, `react-native-view-prop-types` is safer than legacy on `react-native-snap-carousel`, and `update-react-imports` still needs a cleaner comparison target beyond the current legacy parser failure |
+| `class`                         | Still legacy-only — no JSSG port exists on this branch yet                                                                                                                                                                                                                                                                                                    |
+
+
