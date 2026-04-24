@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/replace-react-test-renderer-import"
+name: "react-19-replace-react-test-renderer-import"
 version: "0.1.1"
 description: "Replace react-test-renderer shallow renderer imports with react-shallow-renderer"
 author: "Codemod <hello@codemod.com>"

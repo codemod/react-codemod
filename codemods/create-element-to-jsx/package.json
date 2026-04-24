@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/create-element-to-jsx",
+  "name": "react-create-element-to-jsx",
   "version": "0.1.1",
   "description": "Convert React.createElement calls to JSX",
   "type": "module",

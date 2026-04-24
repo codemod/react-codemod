@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/manual-bind-to-arrow",
+  "name": "react-manual-bind-to-arrow",
   "version": "0.1.1",
   "description": "Convert this.method = this.method.bind(this) to arrow class property",
   "type": "module",

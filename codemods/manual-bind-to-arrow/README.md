@@ -1,9 +1,9 @@
-# manual-bind-to-arrow
+# react-manual-bind-to-arrow
 
 Convert constructor-time `.bind(this)` assignments into arrow class fields.
 
 ## Usage
 
 ```bash
-npx codemod @react-new/manual-bind-to-arrow --target <path>
+npx codemod react-manual-bind-to-arrow --target <path>
 ```

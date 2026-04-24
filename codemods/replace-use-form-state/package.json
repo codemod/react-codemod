@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/replace-use-form-state",
+  "name": "react-19-replace-use-form-state",
   "version": "0.1.1",
   "description": "Rename useFormState to useActionState in react-dom imports and usages",
   "type": "module",

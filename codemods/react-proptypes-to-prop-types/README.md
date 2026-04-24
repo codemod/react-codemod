@@ -5,7 +5,7 @@ Replace legacy React `PropTypes` usage with the `prop-types` package across impo
 ## Usage
 
 ```bash
-npx codemod @react-new/react-proptypes-to-prop-types --target <path>
+npx codemod react-proptypes-to-prop-types --target <path>
 ```
 
 To override the `prop-types` module specifier, pass `--param module-name=<value>`.

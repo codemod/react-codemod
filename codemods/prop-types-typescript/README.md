@@ -1,3 +1,5 @@
+# react-19-prop-types-typescript
+
 Codemod to convert React PropTypes into TypeScript props interfaces.
 
 - Supports function and class components
@@ -10,7 +12,7 @@ Codemod to convert React PropTypes into TypeScript props interfaces.
 ## Usage
 
 ```bash
-npx codemod @react-new/prop-types-typescript --target <path>
+npx codemod react-19-prop-types-typescript --target <path>
 ```
 
 ## Before

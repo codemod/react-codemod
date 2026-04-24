@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/remove-forward-ref",
+  "name": "react-19-remove-forward-ref",
   "version": "0.1.1",
   "description": "Inline forwardRef render functions and move ref into props",
   "type": "module",

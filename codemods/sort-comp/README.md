@@ -1,11 +1,11 @@
-# sort-comp
+# react-sort-comp
 
 Reorder React component members to match the `react/sort-comp` rule across `createClass` components and class components.
 
 ## Usage
 
 ```bash
-npx codemod @react-new/sort-comp --target <path>
+npx codemod react-sort-comp --target <path>
 ```
 
 ## Options

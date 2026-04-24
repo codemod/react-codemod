@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/prop-types-typescript"
+name: "react-19-prop-types-typescript"
 version: "0.1.1"
 description: "Convert React PropTypes declarations into TypeScript props interfaces"
 author: "Codemod <hello@codemod.com>"

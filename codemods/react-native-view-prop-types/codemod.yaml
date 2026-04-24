@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/react-native-view-prop-types"
+name: "react-native-view-prop-types"
 version: "0.1.1"
 description: "Replace View.propTypes with ViewPropTypes"
 author: "Codemod <hello@codemod.com>"

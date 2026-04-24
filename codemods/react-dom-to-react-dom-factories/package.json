@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/react-dom-to-react-dom-factories",
+  "name": "react-dom-to-react-dom-factories",
   "version": "0.1.1",
   "description": "Replace React.DOM factories with createElement calls",
   "type": "module",

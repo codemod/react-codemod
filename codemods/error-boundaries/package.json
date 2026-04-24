@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/error-boundaries",
+  "name": "react-error-boundaries",
   "version": "0.1.1",
   "description": "Rename unstable_handleError to componentDidCatch",
   "type": "module",

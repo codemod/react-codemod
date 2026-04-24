@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/remove-memoization"
+name: "react-19-remove-memoization"
 version: "0.1.1"
 description: "Remove manual React memoization calls for React Compiler adoption"
 author: "Codemod <hello@codemod.com>"

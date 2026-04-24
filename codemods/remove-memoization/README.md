@@ -1,4 +1,4 @@
-# remove-memoization
+# react-19-remove-memoization
 
 Remove manual React memoization calls: `useCallback(...)`, `useMemo(...)`, and `memo(...)`.
 
@@ -9,7 +9,7 @@ This codemod is intended for React Compiler adoption and mirrors `react/19/remov
 ## Usage
 
 ```bash
-npx codemod @react-new/remove-memoization --target <path>
+npx codemod react-19-remove-memoization --target <path>
 ```
 
 ## Example

@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/remove-legacy-context",
+  "name": "react-19-remove-legacy-context",
   "version": "0.1.1",
   "description": "Remove legacy childContextTypes/getChildContext usage from React class components",
   "type": "module",

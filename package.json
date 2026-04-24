@@ -5,8 +5,8 @@
   "description": "A collection of codemods to help update React apps",
   "type": "module",
   "scripts": {
-    "test": "pnpm -r --filter \"@react-new/*\" test",
-    "check-types": "pnpm -r --filter \"@react-new/*\" check-types",
+    "test": "pnpm -r --filter \"react-*\" test",
+    "check-types": "pnpm -r --filter \"react-*\" check-types",
     "changeset": "changeset",
     "version-packages": "changeset version && bash scripts/sync-codemod-versions.sh",
     "ci": "pnpm run test && pnpm run check-types"

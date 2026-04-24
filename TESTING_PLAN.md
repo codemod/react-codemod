@@ -1,6 +1,6 @@
 # Side-by-Side Codemod Testing Plan
 
-> Testing `@react-new/*` JSSG codemods against the relevant legacy or `commons` baselines on real-world open-source repos.
+> Testing `react-*` JSSG codemods against the relevant legacy or `commons` baselines on real-world open-source repos.
 
 ## Executive Summary
 
@@ -265,9 +265,9 @@ Additional real-repo candidate matches confirmed on 2026-04-21:
 ### For each codemod × repo pair:
 
 1. **Clone the repo** at a recent tagged release
-2. **Run the JSSG codemod** (`@react-new/<name>`):
+2. **Run the JSSG codemod** (`react-<name>` or `react-19-<name>`):
    ```bash
-   npx codemod@latest react-new/<codemod-name> --target <path>
+   npx codemod@latest <codemod-name> --target <path>
    ```
 3. **Capture the diff** → `results/jssg/<codemod>/<repo>.diff`
 4. **Reset the repo** (`git checkout .`)

@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/replace-act-import"
+name: "react-19-replace-act-import"
 version: "0.1.1"
 description: "Migrate act() from react-dom/test-utils to react"
 author: "Codemod <hello@codemod.com>"

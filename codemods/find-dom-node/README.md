@@ -1,11 +1,11 @@
-# find-dom-node
+# react-find-dom-node
 
 Replace `.getDOMNode()` calls with `React.findDOMNode(...)`.
 
 ## Usage
 
 ```bash
-npx codemod @react-new/find-dom-node --target <path>
+npx codemod react-find-dom-node --target <path>
 ```
 
 ## Options

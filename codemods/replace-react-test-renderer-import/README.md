@@ -1,4 +1,4 @@
-# replace-react-test-renderer-import
+# react-19-replace-react-test-renderer-import
 
 Replace `react-test-renderer/shallow` module specifiers with `react-shallow-renderer`.
 
@@ -7,7 +7,7 @@ This codemod mirrors `react/19/replace-react-test-renderer-import` from `codemod
 ## Usage
 
 ```bash
-npx codemod @react-new/replace-react-test-renderer-import --target <path>
+npx codemod react-19-replace-react-test-renderer-import --target <path>
 ```
 
 ## Example

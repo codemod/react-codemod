@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/react-to-react-dom",
+  "name": "react-to-react-dom",
   "version": "0.1.1",
   "description": "Move DOM APIs from react to react-dom",
   "type": "module",

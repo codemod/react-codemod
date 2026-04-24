@@ -6,7 +6,7 @@
 
 | Item | Detail |
 |------|--------|
-| **JSSG codemods** | `@react-new/*` (published v0.1.1) plus current local branch implementations under `codemods/` for newly ported or not-yet-published work such as `prop-types-typescript` |
+| **JSSG codemods** | `react-*` packages plus current local branch implementations under `codemods/` for newly ported or not-yet-published work such as `react-19-prop-types-typescript` |
 | **Comparison baselines** | `react/19/*` (jscodeshift, from Codemod Registry) for published transforms; official `reactjs/react-codemod` checkout at `5207d594fad6f8b39c51fd7edd2bcb51047dc872` for unpublished legacy transforms; `prop-types-typescript` compared against `codemod/commons/codemods/react/prop-types-typescript` |
 | **CLI** | `codemod@latest` with `--no-interactive` flag |
 | **Test repos** | youzan/zent (React 17, TS), salesforce/design-system-react (React 17, JS), MetaMask/metamask-extension (React 16/17-era app), azat-co/react-quickly (React ~15, JS/JSX), atlassian/react-beautiful-dnd (React 16.13, JS+Flow), calcom/cal.diy (redirect from calcom/cal.com as of 2026-04-17, React 18/19 monorepo, tested at `v6.2.0` / `1c193cc`), plus targeted imported-codemod slices from `DataTurks` and `react-native-snap-carousel` |

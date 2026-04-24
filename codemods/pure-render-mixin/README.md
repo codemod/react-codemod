@@ -1,11 +1,11 @@
-# pure-render-mixin
+# react-pure-render-mixin
 
 Replace `PureRenderMixin` with `shouldComponentUpdate` using `React.addons.shallowCompare`.
 
 ## Usage
 
 ```bash
-npx codemod @react-new/pure-render-mixin --target <path>
+npx codemod react-pure-render-mixin --target <path>
 ```
 
 ## Options

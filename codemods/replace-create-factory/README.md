@@ -1,4 +1,4 @@
-# replace-create-factory
+# react-19-replace-create-factory
 
 Replace deprecated `React.createFactory(...)` and `createFactory(...)` calls with JSX.
 
@@ -7,7 +7,7 @@ This codemod mirrors `react/19/replace-create-factory` from `codemod/commons`.
 ## Usage
 
 ```bash
-npx codemod @react-new/replace-create-factory --target <path>
+npx codemod react-19-replace-create-factory --target <path>
 ```
 
 ## Example

@@ -1,4 +1,4 @@
-# replace-default-props
+# react-19-replace-default-props
 
 Replace React function component `defaultProps` assignments with ES default parameters.
 
@@ -7,7 +7,7 @@ This codemod mirrors `react/19/replace-default-props` from `codemod/commons`.
 ## Usage
 
 ```bash
-npx codemod @react-new/replace-default-props --target <path>
+npx codemod react-19-replace-default-props --target <path>
 ```
 
 ## Example

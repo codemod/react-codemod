@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/error-boundaries"
+name: "react-error-boundaries"
 version: "0.1.1"
 description: "Rename unstable_handleError to componentDidCatch"
 author: "Codemod <hello@codemod.com>"

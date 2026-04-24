@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/replace-create-factory"
+name: "react-19-replace-create-factory"
 version: "0.1.1"
 description: "Replace deprecated React.createFactory calls with JSX"
 author: "Codemod <hello@codemod.com>"

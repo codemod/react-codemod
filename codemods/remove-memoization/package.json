@@ -1,5 +1,5 @@
 {
-  "name": "@react-new/remove-memoization",
+  "name": "react-19-remove-memoization",
   "version": "0.1.1",
   "description": "Remove manual React memoization calls for React Compiler adoption",
   "type": "module",

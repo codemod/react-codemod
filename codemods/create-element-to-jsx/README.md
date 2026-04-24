@@ -1,9 +1,9 @@
-# create-element-to-jsx
+# react-create-element-to-jsx
 
 Convert `React.createElement(...)` calls to JSX.
 
 ## Usage
 
 ```bash
-npx codemod @react-new/create-element-to-jsx --target <path>
+npx codemod react-create-element-to-jsx --target <path>
 ```

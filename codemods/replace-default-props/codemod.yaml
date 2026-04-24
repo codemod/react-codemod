@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-name: "@react-new/replace-default-props"
+name: "react-19-replace-default-props"
 version: "0.1.1"
 description: "Replace React function component defaultProps with default parameters"
 author: "Codemod <hello@codemod.com>"
