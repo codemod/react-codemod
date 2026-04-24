@@ -1,6 +1,6 @@
 {
   "name": "@react-new/react-19-migration-recipe",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Run all React 19 migration codemods in sequence",
   "type": "module",
   "scripts": {
