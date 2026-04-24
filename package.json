@@ -20,7 +20,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/codemod/jssg-react-codemods.git"
+    "url": "https://github.com/codemod/react-codemod.git"
   },
   "packageManager": "pnpm@9.14.2",
   "devDependencies": {

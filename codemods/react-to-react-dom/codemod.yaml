@@ -1,12 +1,12 @@
 schema_version: "1.0"
 
 name: "react-to-react-dom"
-version: "0.1.1"
+version: "0.1.2"
 description: "Move DOM APIs from react to react-dom"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
-repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/react-to-react-dom"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/react-to-react-dom"
 
 targets:
   languages: ["tsx"]
@@ -15,6 +15,6 @@ keywords: ["React", "ReactDOM"]
 
 registry:
   access: "public"
-  visibility: "private"
+  visibility: "public"
 
 capabilities: []

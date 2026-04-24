@@ -1,6 +1,6 @@
 {
   "name": "react-19-replace-default-props",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace React function component defaultProps with default parameters",
   "type": "module",
   "scripts": {

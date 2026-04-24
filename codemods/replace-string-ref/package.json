@@ -1,6 +1,6 @@
 {
   "name": "react-19-replace-string-ref",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace string refs with callback refs in React class components",
   "type": "module",
   "scripts": {

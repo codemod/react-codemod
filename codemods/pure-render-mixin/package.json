@@ -1,6 +1,6 @@
 {
   "name": "react-pure-render-mixin",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace PureRenderMixin with shouldComponentUpdate using React.addons.shallowCompare",
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "react-19-replace-create-factory",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace deprecated React.createFactory calls with JSX",
   "type": "module",
   "scripts": {

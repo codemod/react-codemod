@@ -1,12 +1,12 @@
 schema_version: "1.0"
 
 name: "react-rename-unsafe-lifecycles"
-version: "0.1.1"
+version: "0.1.2"
 description: "Rename deprecated lifecycle methods to UNSAFE_ prefixed versions"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
-repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/rename-unsafe-lifecycles"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/rename-unsafe-lifecycles"
 
 
 targets:
@@ -16,6 +16,6 @@ keywords: ["React"]
 
 registry:
   access: "public"
-  visibility: "private"
+  visibility: "public"
 
 capabilities: []

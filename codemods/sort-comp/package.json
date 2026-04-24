@@ -1,6 +1,6 @@
 {
   "name": "react-sort-comp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reorder React component methods to match eslint-plugin-react sort-comp rule",
   "type": "module",
   "scripts": {

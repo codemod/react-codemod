@@ -1,6 +1,6 @@
 {
   "name": "react-19-replace-react-test-renderer-import",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace react-test-renderer shallow renderer imports with react-shallow-renderer",
   "type": "module",
   "scripts": {

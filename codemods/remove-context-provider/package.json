@@ -1,6 +1,6 @@
 {
   "name": "react-19-remove-context-provider",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace Context.Provider with Context in JSX",
   "type": "module",
   "scripts": {

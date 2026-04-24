@@ -1,6 +1,6 @@
 {
   "name": "react-pure-component",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Convert simple React classes into pure function components",
   "type": "module",
   "scripts": {

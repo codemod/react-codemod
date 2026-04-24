@@ -1,12 +1,12 @@
 schema_version: "1.0"
 
 name: "react-19-use-context-hook"
-version: "0.1.1"
+version: "0.1.2"
 description: "Transform React.useContext() and useContext() to use() hook"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
-repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/use-context-hook"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/use-context-hook"
 
 
 targets:
@@ -16,6 +16,6 @@ keywords: ["React"]
 
 registry:
   access: "public"
-  visibility: "private"
+  visibility: "public"
 
 capabilities: []

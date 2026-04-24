@@ -1,12 +1,12 @@
 schema_version: "1.0"
 
 name: "react-19-remove-forward-ref"
-version: "0.1.1"
+version: "0.1.2"
 description: "Inline forwardRef render functions and move ref into props"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"
-repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/remove-forward-ref"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/remove-forward-ref"
 
 targets:
   languages: ["tsx"]
@@ -15,6 +15,6 @@ keywords: ["React", "forwardRef"]
 
 registry:
   access: "public"
-  visibility: "private"
+  visibility: "public"
 
 capabilities: []

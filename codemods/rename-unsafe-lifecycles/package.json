@@ -1,6 +1,6 @@
 {
   "name": "react-rename-unsafe-lifecycles",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Rename deprecated lifecycle methods to UNSAFE_ prefixed versions",
   "type": "module",
   "scripts": {

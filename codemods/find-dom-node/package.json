@@ -1,6 +1,6 @@
 {
   "name": "react-find-dom-node",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace getDOMNode() with React.findDOMNode()",
   "type": "module",
   "scripts": {

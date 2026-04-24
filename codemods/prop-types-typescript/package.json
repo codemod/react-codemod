@@ -1,6 +1,6 @@
 {
   "name": "react-19-prop-types-typescript",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Convert React PropTypes declarations into TypeScript props interfaces",
   "type": "module",
   "scripts": {

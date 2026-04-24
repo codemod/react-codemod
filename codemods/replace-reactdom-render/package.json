@@ -1,6 +1,6 @@
 {
   "name": "react-19-replace-reactdom-render",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Replace ReactDOM.render with createRoot for React 18",
   "type": "module",
   "scripts": {
