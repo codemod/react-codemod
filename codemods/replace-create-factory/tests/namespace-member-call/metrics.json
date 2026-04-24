@@ -1,0 +1,11 @@
+{
+  "replace-create-factory-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/namespace-member-call/input.tsx",
+        "pattern": "React.createFactory"
+      },
+      "count": 1
+    }
+  ]
+}

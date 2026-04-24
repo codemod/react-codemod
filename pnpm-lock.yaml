@@ -249,6 +249,18 @@ importers:
         specifier: latest
         version: 6.0.3
 
+  codemods/replace-create-factory:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.6.0
+      '@types/node':
+        specifier: latest
+        version: 25.6.0
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
   codemods/replace-reactdom-render:
     dependencies:
       '@jssg/utils':
@@ -404,6 +416,9 @@ packages:
 
   '@codemod.com/jssg-types@1.5.2':
     resolution: {integrity: sha512-hZ+CuFL7BzE74VKSOG7xHaxgoRahEoOPdp0N9eg4KAwaYt0gc0YNMI/UvCRZKUTnnRBgTswrwgCbHZMDhjTWoQ==}
+
+  '@codemod.com/jssg-types@1.6.0':
+    resolution: {integrity: sha512-9b6rsL3RZJvOPJ+gUj1W0041mHF6eYwLt+wsa4zqxJWNsxLha0JvFyaQdcw5XfQ5Ldd+H/kV/yZ4dpN+hC9OXw==}
 
   '@inquirer/external-editor@1.0.3':
     resolution: {integrity: sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA==}
@@ -879,6 +894,8 @@ snapshots:
       prettier: 2.8.8
 
   '@codemod.com/jssg-types@1.5.2': {}
+
+  '@codemod.com/jssg-types@1.6.0': {}
 
   '@inquirer/external-editor@1.0.3(@types/node@25.6.0)':
     dependencies:

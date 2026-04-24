@@ -1,0 +1,11 @@
+{
+  "replace-create-factory-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/aliased-named-import/input.tsx",
+        "pattern": "createFactory"
+      },
+      "count": 1
+    }
+  ]
+}

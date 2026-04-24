@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/replace-create-factory"
+version: "0.1.1"
+description: "Replace deprecated React.createFactory calls with JSX"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/replace-create-factory"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "createFactory", "JSX"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []
