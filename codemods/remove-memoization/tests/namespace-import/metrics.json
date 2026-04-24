@@ -1,0 +1,18 @@
+{
+  "remove-memoization-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/namespace-import/input.tsx",
+        "pattern": "memo"
+      },
+      "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "tests/namespace-import/input.tsx",
+        "pattern": "useCallback"
+      },
+      "count": 1
+    }
+  ]
+}

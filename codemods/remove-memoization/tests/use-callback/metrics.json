@@ -1,0 +1,11 @@
+{
+  "remove-memoization-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/use-callback/input.tsx",
+        "pattern": "useCallback"
+      },
+      "count": 1
+    }
+  ]
+}

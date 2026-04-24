@@ -1,0 +1,25 @@
+{
+  "remove-memoization-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/aliased-named-imports/input.tsx",
+        "pattern": "memo"
+      },
+      "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "tests/aliased-named-imports/input.tsx",
+        "pattern": "useCallback"
+      },
+      "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "tests/aliased-named-imports/input.tsx",
+        "pattern": "useMemo"
+      },
+      "count": 1
+    }
+  ]
+}

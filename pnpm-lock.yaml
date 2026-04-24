@@ -209,6 +209,18 @@ importers:
         specifier: latest
         version: 6.0.3
 
+  codemods/remove-memoization:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.2
+      '@types/node':
+        specifier: latest
+        version: 25.6.0
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
   codemods/rename-unsafe-lifecycles:
     devDependencies:
       '@codemod.com/jssg-types':

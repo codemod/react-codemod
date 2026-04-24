@@ -1,0 +1,11 @@
+{
+  "remove-memoization-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/typescript-memo-type-import/input.tsx",
+        "pattern": "memo"
+      },
+      "count": 1
+    }
+  ]
+}

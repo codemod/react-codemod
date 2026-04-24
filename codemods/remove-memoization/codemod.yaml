@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/remove-memoization"
+version: "0.1.1"
+description: "Remove manual React memoization calls for React Compiler adoption"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/remove-memoization"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "memoization", "React Compiler"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []
