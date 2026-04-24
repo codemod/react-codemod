@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "@react-new/replace-react-test-renderer-import"
+version: "0.1.1"
+description: "Replace react-test-renderer shallow renderer imports with react-shallow-renderer"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/jssg-react-codemods/tree/main/codemods/replace-react-test-renderer-import"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "react-test-renderer", "shallow", "migration"]
+
+registry:
+  access: "public"
+  visibility: "private"
+
+capabilities: []

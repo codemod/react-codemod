@@ -1,0 +1,11 @@
+{
+  "replace-react-test-renderer-import-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/export-from/input.tsx",
+        "pattern": "export"
+      },
+      "count": 1
+    }
+  ]
+}

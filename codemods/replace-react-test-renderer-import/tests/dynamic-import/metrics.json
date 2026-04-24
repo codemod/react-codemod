@@ -1,0 +1,11 @@
+{
+  "replace-react-test-renderer-import-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/dynamic-import/input.tsx",
+        "pattern": "dynamic-import"
+      },
+      "count": 1
+    }
+  ]
+}
