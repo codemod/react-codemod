@@ -11,7 +11,7 @@ function metricFile(filename: string): string {
 const TEST_UTILS_MODULE = "react-dom/test-utils";
 const REACT_MODULE = "react";
 
-type TestUtilsImport = { name: string; type: "default" | "namespace" };
+type TestUtilsImport = { name: string; type: "default" | "namespace"; moduleType: "esm" | "cjs" };
 type NamedActImport = { importNode: SgNode<TSX>; specifier: SgNode<TSX>; alias: string | null };
 
 function sourceText(node: SgNode<TSX>): string | null {
@@ -106,10 +106,15 @@ function hasActExportFromReact(rootNode: SgNode<TSX, "program">): boolean {
 function getTestUtilsImport(rootNode: SgNode<TSX, "program">): (TestUtilsImport & { importNode?: SgNode<TSX> }) | null {
   const defaultImp = getImport(rootNode, { type: "default", from: TEST_UTILS_MODULE });
   if (defaultImp) {
-    const importNode = defaultImp.node.ancestors().find((a) => a.kind() === "import_statement");
+    const importNode = defaultImp.node.ancestors().find((a) =>
+      a.kind() === "import_statement" ||
+      a.kind() === "lexical_declaration" ||
+      a.kind() === "variable_declaration"
+    );
     return {
       name: defaultImp.alias,
       type: defaultImp.isNamespace ? "namespace" : "default",
+      moduleType: defaultImp.moduleType,
       importNode: importNode ?? undefined,
     };
   }
@@ -130,7 +135,7 @@ function getTestUtilsImport(rootNode: SgNode<TSX, "program">): (TestUtilsImport 
     const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
     if (namespaceImport) {
       const ident = namespaceImport.field("name") ?? namespaceImport.find({ rule: { kind: "identifier" } });
-      if (ident) return { name: ident.text(), type: "namespace", importNode: imp };
+      if (ident) return { name: ident.text(), type: "namespace", moduleType: "esm", importNode: imp };
     }
   }
   return null;
@@ -180,8 +185,9 @@ const transform: Transform<TSX> = async (root) => {
           });
           if (removeEdit) edits.push(removeEdit);
         } else {
-          const newImportText =
-            testUtilsImport.type === "namespace"
+          const newImportText = testUtilsImport.moduleType === "cjs"
+            ? 'const React = require("react");'
+            : testUtilsImport.type === "namespace"
               ? 'import * as React from "react";'
               : 'import React from "react";';
           edits.push(testUtilsImport.importNode.replace(newImportText));

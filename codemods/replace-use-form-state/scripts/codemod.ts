@@ -1,7 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
+import { addImport, getImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -10,6 +10,7 @@ function metricFile(filename: string): string {
 
 
 const REACT_DOM_MODULE = "react-dom";
+type ModuleType = "esm" | "cjs";
 
 type NamedUseFormStateImport = { importNode: SgNode<TSX>; specifier: SgNode<TSX>; localName: string };
 
@@ -25,20 +26,24 @@ function importSource(node: SgNode<TSX>): string | null {
   return source ? sourceText(source) : null;
 }
 
-function findReactDOMMemberImportNames(rootNode: SgNode<TSX, "program">): Set<string> {
-  const names = new Set<string>();
+function findReactDOMMemberImports(rootNode: SgNode<TSX, "program">): Map<string, ModuleType> {
+  const names = new Map<string, ModuleType>();
+  const reactDomBinding = getImport(rootNode, { type: "default", from: REACT_DOM_MODULE });
+  if (reactDomBinding) {
+    names.set(reactDomBinding.alias, reactDomBinding.moduleType);
+  }
 
   for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
     if (importSource(imp) !== REACT_DOM_MODULE) continue;
 
     const importClause = imp.find({ rule: { kind: "import_clause" } });
     const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) names.add(defaultIdentifier.text());
+    if (defaultIdentifier) names.set(defaultIdentifier.text(), "esm");
 
     const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
     const namespaceName =
       namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
-    if (namespaceName) names.add(namespaceName.text());
+    if (namespaceName) names.set(namespaceName.text(), "esm");
   }
 
   return names;
@@ -70,12 +75,13 @@ const transform: Transform<TSX> = async (root) => {
   const edits: Edit[] = [];
   const metric = useMetricAtom("replace-use-form-state-migrations");
 
-  const reactDOMMemberImportNames = findReactDOMMemberImportNames(rootNode);
+  const reactDOMMemberImports = findReactDOMMemberImports(rootNode);
   const namedUseFormStateImports = findNamedUseFormStateImports(rootNode);
 
   let needsReactImport = false;
+  let needsReactImportModuleType: ModuleType = "esm";
 
-  if (reactDOMMemberImportNames.size > 0) {
+  if (reactDOMMemberImports.size > 0) {
     const memberCalls = rootNode.findAll({
       rule: {
         kind: "member_expression",
@@ -88,10 +94,12 @@ const transform: Transform<TSX> = async (root) => {
 
     for (const member of memberCalls) {
       const objNode = member.field("object");
-      if (objNode && reactDOMMemberImportNames.has(objNode.text())) {
+      const moduleType = objNode ? reactDOMMemberImports.get(objNode.text()) : undefined;
+      if (moduleType) {
         // Replace the entire member expression (ReactDOM.useFormState) with just useActionState
         edits.push(member.replace("useActionState"));
         needsReactImport = true;
+        needsReactImportModuleType = moduleType;
         metric.increment({ file: metricFile(root.filename()), pattern: "member-call" });
       }
     }
@@ -184,22 +192,40 @@ const transform: Transform<TSX> = async (root) => {
       from: REACT_MODULE,
     });
     if (!hasReactImport) {
-      // Find last import statement to insert after
-      const allImports = rootNode.findAll({ rule: { kind: "import_statement" } });
-      const lastImport = allImports[allImports.length - 1];
-      if (lastImport) {
-        const endPos = lastImport.range().end.index;
-        edits.push({
-          startPos: endPos,
-          endPos: endPos,
-          insertedText: '\nimport { useActionState } from "react";',
+      if (needsReactImportModuleType === "cjs") {
+        const addImportEdit = addImport(rootNode, {
+          type: "named",
+          from: REACT_MODULE,
+          specifiers: [{ name: "useActionState" }],
+          moduleType: "cjs",
         });
+        if (addImportEdit) {
+          const nextChar = rootNode.text()[addImportEdit.startPos];
+          edits.push({
+            ...addImportEdit,
+            insertedText: nextChar === "\n" || nextChar === "\r"
+              ? `\n${addImportEdit.insertedText.trimEnd()}`
+              : addImportEdit.insertedText,
+          });
+        }
       } else {
-        edits.push({
-          startPos: 0,
-          endPos: 0,
-          insertedText: 'import { useActionState } from "react";\n',
-        });
+        // Find last import statement to insert after
+        const allImports = rootNode.findAll({ rule: { kind: "import_statement" } });
+        const lastImport = allImports[allImports.length - 1];
+        if (lastImport) {
+          const endPos = lastImport.range().end.index;
+          edits.push({
+            startPos: endPos,
+            endPos: endPos,
+            insertedText: '\nimport { useActionState } from "react";',
+          });
+        } else {
+          edits.push({
+            startPos: 0,
+            endPos: 0,
+            insertedText: 'import { useActionState } from "react";\n',
+          });
+        }
       }
     }
   }

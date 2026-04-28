@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -27,6 +28,10 @@ function importSource(node: SgNode<TSX>): string | null {
 
 function findReactMemberImportNames(rootNode: SgNode<TSX, "program">): Set<string> {
   const names = new Set<string>();
+  const reactBinding = getImport(rootNode, { type: "default", from: "react" });
+  if (reactBinding) {
+    names.add(reactBinding.alias);
+  }
 
   for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
     if (importSource(imp) !== "react") continue;
