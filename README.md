@@ -89,6 +89,16 @@ npx codemod react-proptypes-to-prop-types --target <path>
 
 See [react-proptypes-to-prop-types](https://app.codemod.com/registry/react-proptypes-to-prop-types).
 
+#### `react-prop-types-typescript`
+
+Converts React `propTypes` declarations into TypeScript props interfaces.
+
+```bash
+npx codemod react-prop-types-typescript --target <path>
+```
+
+See [react-prop-types-typescript](https://app.codemod.com/registry/react-prop-types-typescript).
+
 #### Additional useful React codemods
 
 - [`react-create-element-to-jsx`](https://app.codemod.com/registry/react-create-element-to-jsx)

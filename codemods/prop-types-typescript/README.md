@@ -1,4 +1,4 @@
-# react-19-prop-types-typescript
+# react-prop-types-typescript
 
 Codemod to convert React PropTypes into TypeScript props interfaces.
 
@@ -12,7 +12,7 @@ Codemod to convert React PropTypes into TypeScript props interfaces.
 ## Usage
 
 ```bash
-npx codemod react-19-prop-types-typescript --target <path>
+npx codemod react-prop-types-typescript --target <path>
 ```
 
 ## Before

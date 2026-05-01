@@ -25,4 +25,4 @@ nodes:
 
       - name: "Convert PropTypes to TypeScript props"
         codemod:
-          source: "react-19-prop-types-typescript"
+          source: "react-prop-types-typescript"
