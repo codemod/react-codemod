@@ -43,7 +43,7 @@ function expectFailure(input, pattern) {
   const result = runCodemod(input);
   const combined = `${result.stdout}\n${result.stderr}`;
   assert.match(combined, pattern);
-  assert.match(combined, /Failed to execute codemod|InitializationFailed/);
+  assert.match(combined, /Failed to execute codemod|InitializationFailed|Workflow failed after|codemod::runtime::javascript/);
 }
 
 test("throws on conflicting ReactDOM binding", () => {

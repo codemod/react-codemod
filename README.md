@@ -112,7 +112,12 @@ See [react-prop-types-typescript](https://app.codemod.com/registry/react-prop-ty
 - [`react-to-react-dom`](https://app.codemod.com/registry/react-to-react-dom)
 - [`react-19-remove-context-provider`](https://app.codemod.com/registry/react-19-remove-context-provider)
 - [`react-19-remove-forward-ref`](https://app.codemod.com/registry/react-19-remove-forward-ref)
+- [`react-19-remove-legacy-context`](https://app.codemod.com/registry/react-19-remove-legacy-context)
+- [`react-19-remove-memoization`](https://app.codemod.com/registry/react-19-remove-memoization)
 - [`react-rename-unsafe-lifecycles`](https://app.codemod.com/registry/react-rename-unsafe-lifecycles)
+- [`react-19-replace-create-factory`](https://app.codemod.com/registry/react-19-replace-create-factory)
+- [`react-19-replace-default-props`](https://app.codemod.com/registry/react-19-replace-default-props)
+- [`react-19-replace-react-test-renderer-import`](https://app.codemod.com/registry/react-19-replace-react-test-renderer-import)
 - [`react-sort-comp`](https://app.codemod.com/registry/react-sort-comp)
 - [`react-update-react-imports`](https://app.codemod.com/registry/react-update-react-imports)
 
