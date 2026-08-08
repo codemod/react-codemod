@@ -1,0 +1,98 @@
+name: Publish
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      codemod_name:
+        description: Codemod directory name under codemods/
+        required: true
+        type: string
+
+concurrency: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  tag:
+    name: Tag released versions
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    outputs:
+      changed_dirs: ${{ steps.tag.outputs.changed_dirs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Detect pending changesets
+        id: pending
+        run: |
+          count="$(find .changeset -maxdepth 1 -type f -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Tag released versions
+        if: steps.pending.outputs.count == '0'
+        id: tag
+        run: node scripts/tag-and-publish.mjs
+
+  publish:
+    name: Publish ${{ matrix.dir }}
+    needs: tag
+    if: >-
+      github.event_name == 'workflow_run' &&
+      needs.tag.outputs.changed_dirs != '' &&
+      needs.tag.outputs.changed_dirs != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: ${{ fromJson(needs.tag.outputs.changed_dirs) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Publish codemod
+        uses: codemod/publish-action@dd6c8dbc5ceb1a6146feba41481d88b43da50024 # v1
+        with:
+          path: ${{ matrix.dir }}
+
+  publish-manual:
+    name: Publish codemod (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish codemod
+        uses: codemod/publish-action@dd6c8dbc5ceb1a6146feba41481d88b43da50024 # v1
+        with:
+          path: codemods/${{ inputs.codemod_name }}

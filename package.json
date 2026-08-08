@@ -8,7 +8,7 @@
     "test": "pnpm -r --filter \"react-*\" test",
     "check-types": "pnpm -r --filter \"react-*\" check-types",
     "changeset": "changeset",
-    "version-packages": "changeset version && bash scripts/sync-codemod-versions.sh",
+    "version-packages": "changeset version && node scripts/sync-codemod-yaml-versions.mjs",
     "ci": "pnpm run test && pnpm run check-types"
   },
   "keywords": [
