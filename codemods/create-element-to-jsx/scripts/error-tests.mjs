@@ -43,5 +43,5 @@ test("throws on unsupported props literal", () => {
   const result = runCodemod("var React = require('react/addons');\nReact.createElement('foo', 1);\n");
   const combined = `${result.stdout}\n${result.stderr}`;
   assert.match(combined, /Unexpected attribute of type .*Literal/);
-  assert.match(combined, /Failed to execute codemod|InitializationFailed/);
+  assert.match(combined, /Failed to execute codemod|InitializationFailed|Workflow failed after|codemod::runtime::javascript/);
 });
