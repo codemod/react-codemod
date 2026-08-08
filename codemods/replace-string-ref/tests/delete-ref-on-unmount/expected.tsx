@@ -11,15 +11,3 @@ class C extends React.Component {
       }} />);
   }
 }
-
-class C1 extends React.PureComponent {
-  render() {
-    return (<div ref={(ref) => {
-        if (ref === null) {
-          delete this.refs.refName;
-        } else {
-          this.refs.refName = ref;
-        }
-      }} />);
-  }
-}

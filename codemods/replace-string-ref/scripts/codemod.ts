@@ -53,7 +53,11 @@ function callbackRefText(refName: string): string {
     ? `this.refs.${refName}`
     : `this.refs[${JSON.stringify(refName)}]`;
   return `ref={(ref) => {
-        ${assignmentTarget} = ref;
+        if (ref === null) {
+          delete ${assignmentTarget};
+        } else {
+          ${assignmentTarget} = ref;
+        }
       }}`;
 }
 

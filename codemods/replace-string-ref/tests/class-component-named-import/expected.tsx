@@ -3,7 +3,11 @@ import { Component, PureComponent } from "react";
 class C extends Component {
   render() {
     return (<div ref={(ref) => {
-        this.refs.refName = ref;
+        if (ref === null) {
+          delete this.refs.refName;
+        } else {
+          this.refs.refName = ref;
+        }
       }} />);
   }
 }
@@ -11,7 +15,11 @@ class C extends Component {
 class C1 extends PureComponent {
   render() {
     return (<div ref={(ref) => {
-        this.refs.refName = ref;
+        if (ref === null) {
+          delete this.refs.refName;
+        } else {
+          this.refs.refName = ref;
+        }
       }} />);
   }
 }

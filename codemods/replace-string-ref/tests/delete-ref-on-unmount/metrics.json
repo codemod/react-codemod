@@ -1,0 +1,11 @@
+{
+  "string-ref-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/delete-ref-on-unmount/input.tsx",
+        "refs": "refName"
+      },
+      "count": 1
+    }
+  ]
+}
