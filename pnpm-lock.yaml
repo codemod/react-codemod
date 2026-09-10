@@ -59,6 +59,18 @@ importers:
         specifier: latest
         version: 6.0.3
 
+  codemods/fragment-ref-wrappers:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.2
+      '@types/node':
+        specifier: latest
+        version: 25.6.0
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
   codemods/manual-bind-to-arrow:
     devDependencies:
       '@codemod.com/jssg-types':
@@ -106,6 +118,8 @@ importers:
       typescript:
         specifier: latest
         version: 6.0.3
+
+  codemods/react-19-3-migration-recipe: {}
 
   codemods/react-19-migration-recipe: {}
 
@@ -345,11 +359,35 @@ importers:
         specifier: latest
         version: 6.0.3
 
+  codemods/unprefix-stable-apis:
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.2
+      '@types/node':
+        specifier: latest
+        version: 25.6.0
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
   codemods/update-react-imports:
     dependencies:
       '@jssg/utils':
         specifier: ^0.0.2
         version: 0.0.2
+    devDependencies:
+      '@codemod.com/jssg-types':
+        specifier: latest
+        version: 1.5.2
+      '@types/node':
+        specifier: latest
+        version: 25.6.0
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
+  codemods/use-browser:
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest

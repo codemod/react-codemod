@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "react-19-3-use-browser"
+version: "0.1.0"
+description: "Replace the mounted-state pattern for browser-only components with use(browser()) from react-dom"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/use-browser"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "browser", "SSR", "Suspense"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

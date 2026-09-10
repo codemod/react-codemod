@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+
+version: "1"
+
+nodes:
+  - id: react-19-3-migration
+    name: React 19.3 Migration
+    type: automatic
+    steps:
+      - name: "Rename unstable_ and experimental_ APIs to their stable names"
+        codemod:
+          source: "react-19-3-unprefix-stable-apis"
+
+      - name: "Replace Context.Provider with Context"
+        codemod:
+          source: "react-19-remove-context-provider"
+
+      - name: "Replace mounted-state browser-only components with use(browser())"
+        codemod:
+          source: "react-19-3-use-browser"
+
+      - name: "Replace display:contents ref wrappers with Fragment refs"
+        codemod:
+          source: "react-19-3-fragment-ref-wrappers"

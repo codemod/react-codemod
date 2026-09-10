@@ -1,0 +1,11 @@
+{
+  "name": "react-19-3-migration-recipe",
+  "version": "0.1.0",
+  "description": "Run all React 19.3 adoption codemods in sequence",
+  "type": "module",
+  "scripts": {
+    "test": "node --test ./scripts/metadata-tests.mjs",
+    "check-types": "node --check ./scripts/metadata-tests.mjs"
+  },
+  "license": "MIT"
+}

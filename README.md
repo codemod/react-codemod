@@ -29,6 +29,46 @@ npx codemod react-19-migration-recipe --target <path>
 
 See [react-19-migration-recipe](https://app.codemod.com/registry/react-19-migration-recipe).
 
+#### `react-19-3-migration-recipe`
+
+Runs all React 19.3 adoption codemods in sequence.
+
+```bash
+npx codemod react-19-3-migration-recipe --target <path>
+```
+
+See [react-19-3-migration-recipe](https://app.codemod.com/registry/react-19-3-migration-recipe).
+
+#### `react-19-3-unprefix-stable-apis`
+
+Renames `unstable_ViewTransition`, `unstable_addTransitionType`, `unstable_Activity`, and `experimental_useEffectEvent` to their stable names.
+
+```bash
+npx codemod react-19-3-unprefix-stable-apis --target <path>
+```
+
+See [react-19-3-unprefix-stable-apis](https://app.codemod.com/registry/react-19-3-unprefix-stable-apis).
+
+#### `react-19-3-use-browser`
+
+Replaces the mounted-state pattern for browser-only components with `use(browser())` from `react-dom`.
+
+```bash
+npx codemod react-19-3-use-browser --target <path>
+```
+
+See [react-19-3-use-browser](https://app.codemod.com/registry/react-19-3-use-browser).
+
+#### `react-19-3-fragment-ref-wrappers`
+
+Replaces `display: contents` wrapper elements that only hold a ref with Fragment refs.
+
+```bash
+npx codemod react-19-3-fragment-ref-wrappers --target <path>
+```
+
+See [react-19-3-fragment-ref-wrappers](https://app.codemod.com/registry/react-19-3-fragment-ref-wrappers).
+
 #### `react-19-use-context-hook`
 
 Replaces usages of `React.useContext(...)` with `React.use(...)`.

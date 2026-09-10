@@ -1,0 +1,10 @@
+{
+  "unprefix-stable-apis-renames": [
+    {
+      "cardinality": {
+        "file": "tests/cjs-require/input.tsx"
+      },
+      "count": 4
+    }
+  ]
+}

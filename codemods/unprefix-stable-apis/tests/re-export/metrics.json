@@ -1,0 +1,10 @@
+{
+  "unprefix-stable-apis-renames": [
+    {
+      "cardinality": {
+        "file": "tests/re-export/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

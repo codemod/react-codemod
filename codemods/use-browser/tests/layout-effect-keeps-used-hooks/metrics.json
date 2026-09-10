@@ -1,0 +1,10 @@
+{
+  "use-browser-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/layout-effect-keeps-used-hooks/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

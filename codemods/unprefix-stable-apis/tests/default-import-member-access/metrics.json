@@ -1,0 +1,10 @@
+{
+  "unprefix-stable-apis-renames": [
+    {
+      "cardinality": {
+        "file": "tests/default-import-member-access/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

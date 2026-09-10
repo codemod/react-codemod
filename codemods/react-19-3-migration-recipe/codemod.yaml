@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "react-19-3-migration-recipe"
+version: "0.1.0"
+description: "Run all React 19.3 adoption codemods in sequence"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/react-19-3-migration-recipe"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "migration", "recipe"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []
