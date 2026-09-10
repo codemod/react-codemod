@@ -1,0 +1,15 @@
+{
+  "name": "react-19-3-fragment-ref-wrappers",
+  "version": "0.1.0",
+  "description": "Replace display:contents wrapper elements that only exist to hold a ref with a Fragment ref",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

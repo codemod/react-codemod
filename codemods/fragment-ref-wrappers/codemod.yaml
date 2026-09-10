@@ -1,0 +1,20 @@
+schema_version: "1.0"
+
+name: "react-19-3-fragment-ref-wrappers"
+version: "0.1.0"
+description: "Replace display:contents wrapper elements that only exist to hold a ref with a Fragment ref"
+author: "Codemod <hello@codemod.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+repository: "https://github.com/codemod/react-codemod/tree/main/codemods/fragment-ref-wrappers"
+
+targets:
+  languages: ["tsx"]
+
+keywords: ["React", "Fragment", "ref"]
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

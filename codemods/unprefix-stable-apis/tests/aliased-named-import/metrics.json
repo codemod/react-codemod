@@ -1,0 +1,10 @@
+{
+  "unprefix-stable-apis-renames": [
+    {
+      "cardinality": {
+        "file": "tests/aliased-named-import/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}
