@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "react-19-3-fragment-ref-wrappers"
-version: "0.1.0"
+version: "0.1.1"
 description: "Replace display:contents wrapper elements that only exist to hold a ref with a Fragment ref"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

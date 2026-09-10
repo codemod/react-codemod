@@ -1,6 +1,6 @@
 {
   "name": "react-19-3-unprefix-stable-apis",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rename unstable_/experimental_ React APIs that became stable in React 19.2 and 19.3 to their stable names",
   "type": "module",
   "scripts": {
