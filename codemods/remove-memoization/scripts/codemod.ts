@@ -232,8 +232,71 @@ function firstMemoizationArgument(
   return firstArg;
 }
 
-function replacementText(call: SgNode<TSX>, selectedCallIds: Set<number>): string | null {
-  return firstMemoizationArgument(call, selectedCallIds)?.text() ?? null;
+// Parents where an arbitrary expression can stand in for the call without
+// extra parentheses. Anywhere else (`a + useMemo(...)`, `!useMemo(...)`) the
+// factory result is wrapped so operator precedence is preserved.
+const BARE_EXPRESSION_PARENTS = new Set([
+  "variable_declarator",
+  "assignment_expression",
+  "return_statement",
+  "arguments",
+  "array",
+  "pair",
+  "jsx_expression",
+  "parenthesized_expression",
+]);
+
+function hasAnonymousChild(node: SgNode<TSX>, text: string): boolean {
+  return node.children().some((child) => !child.isNamed() && child.text() === text);
+}
+
+function unwrapParentheses(node: SgNode<TSX>): SgNode<TSX> {
+  let current = node;
+  while (current.kind() === "parenthesized_expression") {
+    const inner = namedChildren(current)[0];
+    if (!inner || inner.kind() === "sequence_expression") {
+      return current;
+    }
+    current = inner;
+  }
+  return current;
+}
+
+// `useMemo(factory, deps)` evaluates to the factory's *result*, so the call is
+// replaced by that result, not by the factory itself. Expression-bodied arrows
+// become their body; everything else is invoked in place.
+function memoFactoryResultText(call: SgNode<TSX>, factory: SgNode<TSX>): string {
+  const bareParent = BARE_EXPRESSION_PARENTS.has(call.parent()?.kind() ?? "");
+  const wrap = (text: string) => (bareParent ? text : `(${text})`);
+
+  if (factory.kind() === "arrow_function" && !hasAnonymousChild(factory, "async")) {
+    const body = factory.field("body");
+    if (body && body.kind() !== "statement_block") {
+      return wrap(unwrapParentheses(body).text());
+    }
+  }
+
+  if (factory.kind() === "identifier") {
+    return `${factory.text()}()`;
+  }
+
+  return `(${factory.text()})()`;
+}
+
+function replacementText(
+  match: MemoizationCall,
+  selectedCallIds: Set<number>,
+): string | null {
+  const firstArg = firstMemoizationArgument(match.call, selectedCallIds);
+  if (!firstArg) {
+    return null;
+  }
+
+  if (match.importedName === "useMemo") {
+    return memoFactoryResultText(match.call, firstArg);
+  }
+
+  return firstArg.text();
 }
 
 function keptRanges(call: SgNode<TSX>, selectedCallIds: Set<number>): Range[] {
@@ -304,10 +367,23 @@ function importStatementReplacement(
   reactImport: ReactImportInfo,
   usedImportLocals: Set<string>,
   sourceCode: string,
-): Edit {
-  const keptNamedSpecifiers = reactImport.namedSpecifiers.filter((specifier) => usedImportLocals.has(specifier.localName));
+): Edit | null {
+  // Only the memoization imports are candidates for removal; an unrelated
+  // specifier that happens to be unused is not this codemod's business.
+  const keptNamedSpecifiers = reactImport.namedSpecifiers.filter((specifier) =>
+    usedImportLocals.has(specifier.localName) || !MEMOIZATION_IMPORTS.has(specifier.importedName)
+  );
   const keepDefault = reactImport.defaultSpecifier ? usedImportLocals.has(reactImport.defaultSpecifier.localName) : false;
   const keepNamespace = reactImport.namespaceSpecifier ? usedImportLocals.has(reactImport.namespaceSpecifier.localName) : false;
+
+  // An import that loses no specifier keeps its original text, so formatting,
+  // `import type` and semicolon style survive untouched.
+  const droppedDefault = Boolean(reactImport.defaultSpecifier) && !keepDefault;
+  const droppedNamespace = Boolean(reactImport.namespaceSpecifier) && !keepNamespace;
+  const droppedNamed = keptNamedSpecifiers.length !== reactImport.namedSpecifiers.length;
+  if (!droppedDefault && !droppedNamespace && !droppedNamed) {
+    return null;
+  }
 
   const range = nodeRange(reactImport.importNode);
   const allRemoved = !keepDefault && !keepNamespace && keptNamedSpecifiers.length === 0;
@@ -329,10 +405,11 @@ function importStatementReplacement(
   }
 
   const quote = sourceQuote(reactImport.sourceNode);
+  const semicolon = reactImport.importNode.text().trimEnd().endsWith(";") ? ";" : "";
   return {
     startPos: range.start,
     endPos: range.end,
-    insertedText: `import ${clauses.join(", ")} from ${quote}react${quote};`,
+    insertedText: `import ${clauses.join(", ")} from ${quote}react${quote}${semicolon}`,
   };
 }
 
@@ -427,7 +504,7 @@ const transform: Transform<TSX> = async (root) => {
   const metricCounts = new Map<string, number>();
 
   for (const match of selectedMatches) {
-    const replacement = replacementText(match.call, selectedCallIds);
+    const replacement = replacementText(match, selectedCallIds);
     if (!replacement) {
       continue;
     }
@@ -457,7 +534,7 @@ const transform: Transform<TSX> = async (root) => {
   const sourceCode = rootNode.text();
   for (const reactImport of reactImports) {
     const edit = importStatementReplacement(reactImport, usedImportLocals, sourceCode);
-    if (edit.insertedText !== reactImport.importNode.text()) {
+    if (edit) {
       edits.push(edit);
     }
   }
