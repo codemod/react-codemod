@@ -11,5 +11,8 @@
     "@codemod.com/jssg-types": "latest",
     "typescript": "latest",
     "@types/node": "latest"
+  },
+  "dependencies": {
+    "@jssg/utils": "^0.0.10"
   }
 }

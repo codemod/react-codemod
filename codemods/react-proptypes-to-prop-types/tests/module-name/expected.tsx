@@ -1,5 +1,5 @@
-const PropTypes = require('PropTypes');
 const React = require('React');
+const PropTypes = require('PropTypes');
 
 class ClassComponent extends React.Component {
   static propTypes = {

@@ -1,8 +1,8 @@
 /**
  * This is some multiline comment
  */
-import PropTypes from 'prop-types';
 import React from 'react';
+import PropTypes from 'prop-types';
 
 function FunctionalComponent (props) {
   return <div>{props.text}</div>;

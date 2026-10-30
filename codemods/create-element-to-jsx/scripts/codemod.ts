@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getImport } from "@jssg/utils/javascript/imports";
 
 type Conversion = {
   code: string;
@@ -33,7 +34,19 @@ type ArgumentLayout = {
   boundaryComments: SgNode<TSX>[][];
 };
 
-const REACT_MODULES = new Set(["React", "react", "react/addons", "react-native"]);
+const REACT_MODULES = ["React", "react", "react/addons", "react-native"] as const;
+const REACT_MODULE_SET = new Set<string>(REACT_MODULES);
+
+/** Resolved per-transform from import/require bindings (supports `import * as R`). */
+let currentReactAlias = "React";
+
+function resolveReactAlias(rootNode: SgNode<TSX, "program">): string {
+  for (const from of REACT_MODULES) {
+    const imp = getImport(rootNode, { type: "default", from });
+    if (imp) return imp.alias;
+  }
+  return "React";
+}
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -92,10 +105,6 @@ function stringValue(node: SgNode<TSX>): string {
   return evaluated;
 }
 
-function isReactModuleName(value: string | null): boolean {
-  return value !== null && REACT_MODULES.has(value);
-}
-
 function stringNodeFrom(node: SgNode<TSX>): SgNode<TSX> | null {
   if (node.kind() === "string") {
     return node;
@@ -144,6 +153,10 @@ function hasReact(rootNode: SgNode<TSX>): boolean {
   return false;
 }
 
+function isReactModuleName(value: string | null): boolean {
+  return value !== null && REACT_MODULE_SET.has(value);
+}
+
 function callArguments(call: SgNode<TSX>): SgNode<TSX>[] {
   const args = call.field("arguments");
   if (!args) {
@@ -167,7 +180,7 @@ function isReactCreateElementCall(node: SgNode<TSX>): boolean {
   const property = callee.field("property");
 
   return object?.kind() === "identifier" &&
-    object.text() === "React" &&
+    object.text() === currentReactAlias &&
     property?.kind() === "property_identifier" &&
     property.text() === "createElement";
 }
@@ -489,7 +502,7 @@ function propsToDescriptors(node: SgNode<TSX> | null, source: string): {
     return { attrs: [], trailingElementComments: [], consumedBoundaryComments: [] };
   }
 
-  if (isMemberCall(node, "React", "__spread") || isMemberCall(node, "Object", "assign")) {
+  if (isMemberCall(node, currentReactAlias, "__spread") || isMemberCall(node, "Object", "assign")) {
     const callee = node.field("function");
     const calleeObject = callee?.field("object") ?? null;
     const calleeProperty = callee?.field("property") ?? null;
@@ -750,7 +763,7 @@ function propsToAttributes(node: SgNode<TSX> | null): string[] {
     return [];
   }
 
-  if (isMemberCall(node, "React", "__spread") || isMemberCall(node, "Object", "assign")) {
+  if (isMemberCall(node, currentReactAlias, "__spread") || isMemberCall(node, "Object", "assign")) {
     return callArguments(node).flatMap((arg) => propsToAttributes(arg));
   }
 
@@ -1213,6 +1226,8 @@ const transform: Transform<TSX> = async (root, options) => {
   if (!explicitRequireDisabled(options.params?.["explicit-require"]) && !hasReact(rootNode)) {
     return null;
   }
+
+  currentReactAlias = resolveReactAlias(rootNode);
 
   const canConvertCall = (call: SgNode<TSX>): boolean => {
     const cached = convertibility.get(call.id());

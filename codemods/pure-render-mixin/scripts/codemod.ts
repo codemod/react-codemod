@@ -1,8 +1,10 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getImport } from "@jssg/utils/javascript/imports";
 
-const REACT_MODULES = new Set(["React", "react", "react/addons", "react-native"]);
+const REACT_MODULES = ["React", "react", "react/addons", "react-native"] as const;
+const REACT_MODULE_SET = new Set<string>(REACT_MODULES);
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -36,38 +38,52 @@ function importSource(node: SgNode<TSX>): string | null {
 
 function hasReact(rootNode: SgNode<TSX, "program">): boolean {
   for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (REACT_MODULES.has(importSource(importNode) ?? "")) return true;
+    if (REACT_MODULE_SET.has(importSource(importNode) ?? "")) return true;
   }
 
   for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
-    if (REACT_MODULES.has(requireSource(call) ?? "")) return true;
+    if (REACT_MODULE_SET.has(requireSource(call) ?? "")) return true;
   }
 
   return false;
+}
+
+function resolveReactAlias(rootNode: SgNode<TSX, "program">): string {
+  for (const from of REACT_MODULES) {
+    const imp = getImport(rootNode, { type: "default", from });
+    if (imp) return imp.alias;
+  }
+  return "React";
 }
 
 function explicitRequireDisabled(value: unknown): boolean {
   return value === false || value === "false";
 }
 
-function isReactCreateClassCall(node: SgNode<TSX> | null): node is SgNode<TSX> {
+function isReactCreateClassCall(
+  node: SgNode<TSX> | null,
+  reactAlias: string,
+): node is SgNode<TSX> {
   if (!node || node.kind() !== "call_expression") return false;
   const callee = node.field("function");
   return callee?.kind() === "member_expression" &&
     callee.field("object")?.kind() === "identifier" &&
-    callee.field("object")?.text() === "React" &&
+    callee.field("object")?.text() === reactAlias &&
     callee.field("property")?.kind() === "property_identifier" &&
     callee.field("property")?.text() === "createClass";
 }
 
-function reactCreateClassDeclarators(rootNode: SgNode<TSX, "program">): Array<{
+function reactCreateClassDeclarators(
+  rootNode: SgNode<TSX, "program">,
+  reactAlias: string,
+): Array<{
   declarator: SgNode<TSX>;
   call: SgNode<TSX>;
 }> {
   const result: Array<{ declarator: SgNode<TSX>; call: SgNode<TSX> }> = [];
   for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
     const value = declarator.field("value");
-    if (isReactCreateClassCall(value)) result.push({ declarator, call: value });
+    if (isReactCreateClassCall(value, reactAlias)) result.push({ declarator, call: value });
   }
   return result;
 }
@@ -122,11 +138,16 @@ function declarationRemovalRange(varDecl: SgNode<TSX>, source: string): { start:
   return { start, end };
 }
 
-function shouldUpdatePropertyText(): string {
-  return `${SHOULD_COMPONENT_UPDATE}: function(nextProps, nextState) {\n    return React.addons.shallowCompare(this, nextProps, nextState);\n  }`;
+function shouldUpdatePropertyText(reactAlias: string): string {
+  return `${SHOULD_COMPONENT_UPDATE}: function(nextProps, nextState) {\n    return ${reactAlias}.addons.shallowCompare(this, nextProps, nextState);\n  }`;
 }
 
-function renderConfigObject(configObj: SgNode<TSX>, mixinsPair: SgNode<TSX>, mixinName: string): string | null {
+function renderConfigObject(
+  configObj: SgNode<TSX>,
+  mixinsPair: SgNode<TSX>,
+  mixinName: string,
+  reactAlias: string,
+): string | null {
   const mixinsValue = mixinsPair.field("value");
   if (!mixinsValue || mixinsValue.kind() !== "array") return null;
   const mixinInArray = mixinsValue.findAll(arrayIdentifierNamedRule(mixinName));
@@ -162,7 +183,7 @@ function renderConfigObject(configObj: SgNode<TSX>, mixinsPair: SgNode<TSX>, mix
 
   if (renderedProps.length === 0) return null;
 
-  const shouldUpdateText = shouldUpdatePropertyText();
+  const shouldUpdateText = shouldUpdatePropertyText(reactAlias);
   if (renderIndex >= 0 && renderIndex === renderedProps.length - 1) {
     renderedProps.splice(renderIndex, 0, shouldUpdateText);
   } else {
@@ -180,12 +201,13 @@ const transform: Transform<TSX> = async (root, options) => {
 
   const source = rootNode.text();
   const edits: Edit[] = [];
+  const reactAlias = resolveReactAlias(rootNode);
 
   const mixinName = (options.params?.["mixin-name"] as string) ?? DEFAULT_MIXIN_NAME;
   const metric = useMetricAtom("pure-render-mixin-replacements");
   let transformCount = 0;
 
-  for (const { call } of reactCreateClassDeclarators(rootNode)) {
+  for (const { call } of reactCreateClassDeclarators(rootNode, reactAlias)) {
     const configObj = getConfigObject(call);
     if (!configObj) continue;
 
@@ -200,7 +222,7 @@ const transform: Transform<TSX> = async (root, options) => {
     const mixinInArray = value.findAll(arrayIdentifierNamedRule(mixinName));
     if (mixinInArray.length === 0) continue;
 
-    const newConfigText = renderConfigObject(configObj, mixinsPair, mixinName);
+    const newConfigText = renderConfigObject(configObj, mixinsPair, mixinName, reactAlias);
     if (!newConfigText) continue;
     edits.push(configObj.replace(newConfigText));
 
