@@ -8,7 +8,6 @@ import { spawnSync } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
-const codemodRunner = path.resolve(packageDir, "../../scripts/run-codemod.mjs");
 const workflowPath = path.join(packageDir, "workflow.yaml");
 const testsDir = path.join(packageDir, "tests");
 
@@ -27,7 +26,7 @@ function runJssg(source) {
     spawnSync("git", ["add", "input.tsx", ".gitignore"], { cwd: dir });
     spawnSync("git", ["commit", "-qm", "init"], { cwd: dir });
 
-    const result = spawnSync("node", [codemodRunner,
+    const result = spawnSync("codemod", [
         "workflow",
         "run",
         "-w",

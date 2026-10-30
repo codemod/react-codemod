@@ -30,10 +30,5 @@
   },
   "dependencies": {
     "@jssg/utils": "^0.0.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "typescript": "~5.9.3"
-    }
   }
 }

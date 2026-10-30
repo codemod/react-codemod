@@ -8,7 +8,6 @@ import { spawnSync } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
-const codemodRunner = path.resolve(packageDir, "../../scripts/run-codemod.mjs");
 const workflowPath = path.join(packageDir, "workflow.yaml");
 
 function runCodemod(input) {
@@ -17,7 +16,7 @@ function runCodemod(input) {
   writeFileSync(filePath, input, "utf8");
 
   try {
-    return spawnSync("node", [codemodRunner,
+    return spawnSync("codemod", [
         "workflow",
         "run",
         "-w",

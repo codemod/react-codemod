@@ -5,13 +5,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import * as typescriptNs from "typescript";
-const ts = typescriptNs.default ?? typescriptNs;
+import ts from "@typescript/typescript6";
 import { cases } from "./parity-cases.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
-const codemodRunner = path.resolve(packageDir, "../../scripts/run-codemod.mjs");
 const codemodPath = path.join(packageDir, "scripts", "codemod.ts");
 const resultsCache = new Map();
 
@@ -52,7 +50,7 @@ function runMode(mode) {
       writeFileSync(path.join(dir, filename), testCase.input, "utf8");
     }
 
-    const command = [codemodRunner,
+    const command = [
       "jssg",
       "run",
       "--language",
@@ -67,7 +65,7 @@ function runMode(mode) {
       command.push("--param", `preserve-prop-types=${mode}`);
     }
 
-    const result = spawnSync("node", command, {
+    const result = spawnSync("codemod", command, {
       cwd: packageDir,
       encoding: "utf8",
       timeout: 120000,

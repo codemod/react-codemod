@@ -4,13 +4,14 @@
   "description": "Convert simple React classes into pure function components",
   "type": "module",
   "scripts": {
-    "test": "node ../../scripts/run-codemod.mjs jssg test -l tsx ./scripts/codemod.ts && node --test ./scripts/warning-tests.mjs ./scripts/differential-tests.mjs",
+    "test": "codemod jssg test -l tsx ./scripts/codemod.ts && node --test ./scripts/warning-tests.mjs ./scripts/differential-tests.mjs",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
     "@codemod.com/jssg-types": "latest",
     "@types/node": "latest",
-    "typescript": "~5.9.3"
+    "typescript": "^7.0.2",
+    "codemod": "1.18.6"
   },
   "dependencies": {
     "@jssg/utils": "^0.0.10"
