@@ -1,0 +1,10 @@
+{
+  "pure-component-conversions": [
+    {
+      "cardinality": {
+        "file": "tests/multi-specifier-keep-sibling/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

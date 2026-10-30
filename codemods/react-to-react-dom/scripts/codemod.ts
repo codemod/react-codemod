@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports, getImport } from "@jssg/utils/javascript/imports";
 
 type NamedSpecifier = {
   name: string;
@@ -222,7 +223,7 @@ function sortSpecs(specs: NamedSpecifier[]): NamedSpecifier[] {
   return [...specs].sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function findModuleImports(rootNode: SgNode<TSX>, moduleName: string): ImportBinding {
+function findModuleImports(rootNode: SgNode<TSX, "program">, moduleName: string): ImportBinding {
   const statements = rootNode.findAll({ rule: { kind: "import_statement" } })
     .filter((stmt) => importSource(stmt) === moduleName);
 
@@ -232,21 +233,33 @@ function findModuleImports(rootNode: SgNode<TSX>, moduleName: string): ImportBin
 
   for (const stmt of statements) {
     quote = quoteForImport(stmt);
-    const clause = stmt.find({ rule: { kind: "import_clause" } });
-    if (!clause) {
-      continue;
-    }
+  }
 
-    const defaultIdentifier = namedChildren(clause)
-      .find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) {
-      alias = defaultIdentifier.text();
-    }
+  for (const imp of getAllImports(rootNode, { type: "default", from: moduleName })) {
+    if (imp.moduleType !== "esm") continue;
+    alias = imp.alias;
+  }
 
+  // Collect every named specifier from ESM import statements for this module.
+  for (const stmt of statements) {
     for (const spec of stmt.findAll({ rule: { kind: "import_specifier" } })) {
+      const name = spec.field("name")?.text();
+      if (!name) continue;
+      const local = spec.field("alias")?.text();
       named.push({
-        name: spec.field("name")?.text() ?? spec.text(),
-        alias: spec.field("alias")?.text() ?? undefined,
+        name,
+        alias: local && local !== name ? local : undefined,
+      });
+    }
+  }
+
+  // Prefer getImport for DOM APIs so aliased named imports (findDOMNode as X) are robust.
+  for (const apiName of [...DOM_PROPERTIES, ...DOM_SERVER_PROPERTIES]) {
+    for (const imp of getAllImports(rootNode, { type: "named", name: apiName, from: moduleName })) {
+      if (imp.moduleType !== "esm" || imp.isNamespace) continue;
+      named.push({
+        name: apiName,
+        alias: imp.alias !== apiName ? imp.alias : undefined,
       });
     }
   }
@@ -259,29 +272,30 @@ function findModuleImports(rootNode: SgNode<TSX>, moduleName: string): ImportBin
   };
 }
 
-function findRequireBinding(rootNode: SgNode<TSX>, moduleName: string): RequireBinding | null {
-  for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
-    const name = declarator.field("name");
-    const value = declarator.field("value");
-    if (name?.kind() !== "identifier" || !isRequireOf(value, moduleName)) {
-      continue;
-    }
-
-    const statement = declarator.ancestors().find((ancestor) =>
-      ancestor.kind() === "variable_declaration" || ancestor.kind() === "lexical_declaration"
-    );
-    if (!statement) {
-      continue;
-    }
-
-    return {
-      alias: name.text(),
-      statement,
-      kind: declarationKind(statement),
-    };
+function findRequireBinding(rootNode: SgNode<TSX, "program">, moduleName: string): RequireBinding | null {
+  const imp = getImport(rootNode, { type: "default", from: moduleName });
+  if (!imp || imp.moduleType !== "cjs" || imp.isNamespace) {
+    return null;
   }
 
-  return null;
+  const statement = imp.node.ancestors().find((ancestor) =>
+    ancestor.kind() === "variable_declaration" || ancestor.kind() === "lexical_declaration"
+  );
+  if (!statement) {
+    return null;
+  }
+
+  // Skip destructured requires — those are handled via named import helpers elsewhere.
+  const declarator = imp.node.ancestors().find((ancestor) => ancestor.kind() === "variable_declarator");
+  if (declarator?.field("name")?.kind() !== "identifier") {
+    return null;
+  }
+
+  return {
+    alias: imp.alias,
+    statement,
+    kind: declarationKind(statement),
+  };
 }
 
 function findAssignmentBinding(rootNode: SgNode<TSX>, moduleName: string): AssignmentBinding | null {
@@ -315,13 +329,13 @@ function findAssignmentBinding(rootNode: SgNode<TSX>, moduleName: string): Assig
   return null;
 }
 
-function hasCoreSource(rootNode: SgNode<TSX>, moduleName: string): boolean {
+function hasCoreSource(rootNode: SgNode<TSX, "program">, moduleName: string): boolean {
   return findModuleImports(rootNode, moduleName).statements.length > 0 ||
     findRequireBinding(rootNode, moduleName) !== null ||
     findAssignmentBinding(rootNode, moduleName) !== null;
 }
 
-function activePair(rootNode: SgNode<TSX>): ModulePair | null {
+function activePair(rootNode: SgNode<TSX, "program">): ModulePair | null {
   for (const pair of MODULE_PAIRS) {
     if (hasCoreSource(rootNode, pair.core)) {
       return pair;

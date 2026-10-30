@@ -1,6 +1,6 @@
 import { Suspense, use } from "react";
-import { browser } from "react-dom";
 import { ClockSkeleton, formatNow } from "./clock";
+import { browser } from "react-dom";
 
 export function LocalClock(props: { format: string }) {
   return (

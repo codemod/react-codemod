@@ -208,10 +208,6 @@ importers:
         version: 6.0.3
 
   codemods/remove-context-provider:
-    dependencies:
-      '@jssg/utils':
-        specifier: ^0.0.10
-        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest

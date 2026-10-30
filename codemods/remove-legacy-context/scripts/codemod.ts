@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { addImport, getAllImports } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -19,65 +20,27 @@ function firstNamedChild(node: SgNode<TSX> | null): SgNode<TSX> | null {
   return namedChildren(node)[0] ?? null;
 }
 
-function sourceText(node: SgNode<TSX>): string | null {
-  const fragment = node.find({ rule: { kind: "string_fragment" } });
-  if (fragment) {
-    return fragment.text();
-  }
-
-  const text = node.text();
-  return text.length >= 2 ? text.slice(1, -1) : null;
-}
-
-function importSource(node: SgNode<TSX>): string | null {
-  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
-  return source ? sourceText(source) : null;
-}
-
 type ReactImportInfo = {
   componentNames: Set<string>;
   reactObjectNames: Set<string>;
   preferredReactObjectName: string | null;
-  quoteChar: "'" | "\"";
 };
 
 function collectReactImportInfo(rootNode: SgNode<TSX, "program">): ReactImportInfo {
   const componentNames = new Set<string>();
   const reactObjectNames = new Set<string>();
   let preferredReactObjectName: string | null = null;
-  let quoteChar: "'" | "\"" = "\"";
 
-  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(importNode) !== "react") {
-      continue;
-    }
+  for (const imp of getAllImports(rootNode, { type: "default", from: "react" })) {
+    reactObjectNames.add(imp.alias);
+    preferredReactObjectName ??= imp.alias;
+  }
 
-    const sourceNode = importNode.field("source") ?? importNode.find({ rule: { kind: "string" } });
-    if (sourceNode?.text().startsWith("'")) {
-      quoteChar = "'";
-    }
-
-    const importClause = importNode.find({ rule: { kind: "import_clause" } });
-    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) {
-      reactObjectNames.add(defaultIdentifier.text());
-      preferredReactObjectName ??= defaultIdentifier.text();
-    }
-
-    const namespaceImport = importNode.find({ rule: { kind: "namespace_import" } });
-    const namespaceName = namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
-    if (namespaceName) {
-      reactObjectNames.add(namespaceName.text());
-      preferredReactObjectName ??= namespaceName.text();
-    }
-
-    for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
-      const importedName = specifier.field("name")?.text();
-      if (importedName !== "Component" && importedName !== "PureComponent") {
-        continue;
+  for (const name of ["Component", "PureComponent"] as const) {
+    for (const imp of getAllImports(rootNode, { type: "named", name, from: "react" })) {
+      if (!imp.isNamespace) {
+        componentNames.add(imp.alias);
       }
-
-      componentNames.add(specifier.field("alias")?.text() ?? importedName);
     }
   }
 
@@ -85,7 +48,6 @@ function collectReactImportInfo(rootNode: SgNode<TSX, "program">): ReactImportIn
     componentNames,
     reactObjectNames,
     preferredReactObjectName,
-    quoteChar,
   };
 }
 
@@ -345,22 +307,19 @@ const transform: Transform<TSX> = async (root) => {
   }
 
   if (needsReactHelperImport && helperReactObjectName) {
-    const allImports = rootNode.findAll({ rule: { kind: "import_statement" } });
-    const importTarget = allImports[allImports.length - 1];
-    const importText = `import * as ${helperReactObjectName} from ${reactImportInfo.quoteChar}react${reactImportInfo.quoteChar};\n`;
-
-    if (importTarget) {
-      const insertPos = consumeLineBreak(source, importTarget.range().end.index);
+    const importEdit = addImport(rootNode, {
+      type: "namespace",
+      name: helperReactObjectName,
+      from: "react",
+    });
+    if (importEdit) {
+      const quoteMatch = source.match(/\bfrom\s+(['"])/);
+      const quote = quoteMatch?.[1] === "'" ? "'" : '"';
       edits.push({
-        startPos: insertPos,
-        endPos: insertPos,
-        insertedText: importText,
-      });
-    } else {
-      edits.push({
-        startPos: 0,
-        endPos: 0,
-        insertedText: `${importText}\n`,
+        ...importEdit,
+        insertedText: importEdit.insertedText
+          .replace(/"([^"]+)"/g, `${quote}$1${quote}`)
+          .replace(/'([^']+)'/g, `${quote}$1${quote}`),
       });
     }
   }
