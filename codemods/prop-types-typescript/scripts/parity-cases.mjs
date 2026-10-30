@@ -1149,4 +1149,32 @@ export function MyComponent(props: MyComponentProps) {
 }
 `,
   },
+  {
+    name: "multiline-prop-types-import",
+    input: `import PropTypes, {
+  Validator,
+} from "prop-types"
+import React from "react"
+
+export const MyComponent = (props) => {
+  return <span />
+}
+
+MyComponent.propTypes = {
+  bar: PropTypes.string.isRequired,
+  foo: PropTypes.number,
+}
+`,
+    expected: `import React from "react"
+
+interface MyComponentProps {
+  bar: string
+  foo?: number
+}
+
+export const MyComponent = (props: MyComponentProps) => {
+  return <span />
+}
+`,
+  },
 ];

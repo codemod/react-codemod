@@ -1,6 +1,6 @@
-import { createRoot } from "react-dom/client";
 import { render } from "react-dom";
 import { render as render2 } from "react-dom";
+import { createRoot } from 'react-dom/client';
 
 const root = createRoot(node1);
 root.render(<A />);

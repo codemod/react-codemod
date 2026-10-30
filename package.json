@@ -28,6 +28,6 @@
     "@types/node": "latest"
   },
   "dependencies": {
-    "@jssg/utils": "^0.0.2"
+    "@jssg/utils": "^0.0.10"
   }
 }

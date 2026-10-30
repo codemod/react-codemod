@@ -1,0 +1,11 @@
+{
+  "reactdom-render-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/single-quote-create-root-import/input.tsx",
+        "pattern": "ReactDOM.render"
+      },
+      "count": 1
+    }
+  ]
+}

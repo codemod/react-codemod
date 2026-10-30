@@ -1,5 +1,5 @@
-import { createRoot } from "react-dom/client";
 import { render } from "react-dom";
+import { createRoot } from 'react-dom/client';
 
 const fn = () => {
   if (true) {

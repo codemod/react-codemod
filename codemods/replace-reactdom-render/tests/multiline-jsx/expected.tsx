@@ -1,5 +1,5 @@
-import { createRoot } from "react-dom/client";
 import * as ReactDOM from "react-dom";
+import { createRoot } from 'react-dom/client';
 
 function show(container) {
     const root = createRoot(container);

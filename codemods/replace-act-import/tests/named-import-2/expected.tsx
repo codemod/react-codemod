@@ -1,4 +1,3 @@
-import { FC , act} from "react";
-
+import { FC, act } from "react";
 
 act();

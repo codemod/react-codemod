@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@changesets/cli':
         specifier: ^2.30.0
@@ -20,6 +20,10 @@ importers:
         version: 25.6.0
 
   codemods/create-element-to-jsx:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -46,8 +50,8 @@ importers:
   codemods/find-dom-node:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -60,6 +64,10 @@ importers:
         version: 6.0.3
 
   codemods/fragment-ref-wrappers:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -84,6 +92,10 @@ importers:
         version: 6.0.3
 
   codemods/prop-types-typescript:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -96,6 +108,10 @@ importers:
         version: 6.0.3
 
   codemods/pure-component:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -108,6 +124,10 @@ importers:
         version: 6.0.3
 
   codemods/pure-render-mixin:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -126,8 +146,8 @@ importers:
   codemods/react-dom-to-react-dom-factories:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -142,8 +162,8 @@ importers:
   codemods/react-native-view-prop-types:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -158,8 +178,8 @@ importers:
   codemods/react-proptypes-to-prop-types:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -172,6 +192,10 @@ importers:
         version: 6.0.3
 
   codemods/react-to-react-dom:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -184,6 +208,10 @@ importers:
         version: 6.0.3
 
   codemods/remove-context-provider:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -198,8 +226,8 @@ importers:
   codemods/remove-forward-ref:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -212,6 +240,10 @@ importers:
         version: 6.0.3
 
   codemods/remove-legacy-context:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -224,6 +256,10 @@ importers:
         version: 6.0.3
 
   codemods/remove-memoization:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -250,8 +286,8 @@ importers:
   codemods/replace-act-import:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -264,6 +300,10 @@ importers:
         version: 6.0.3
 
   codemods/replace-create-factory:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -302,8 +342,8 @@ importers:
   codemods/replace-reactdom-render:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -318,8 +358,8 @@ importers:
   codemods/replace-string-ref:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -334,8 +374,8 @@ importers:
   codemods/replace-use-form-state:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -348,6 +388,10 @@ importers:
         version: 6.0.3
 
   codemods/sort-comp:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -360,6 +404,10 @@ importers:
         version: 6.0.3
 
   codemods/unprefix-stable-apis:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -374,8 +422,8 @@ importers:
   codemods/update-react-imports:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -388,6 +436,10 @@ importers:
         version: 6.0.3
 
   codemods/use-browser:
+    dependencies:
+      '@jssg/utils':
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -402,8 +454,8 @@ importers:
   codemods/use-context-hook:
     dependencies:
       '@jssg/utils':
-        specifier: ^0.0.2
-        version: 0.0.2
+        specifier: ^0.0.10
+        version: 0.0.10
     devDependencies:
       '@codemod.com/jssg-types':
         specifier: latest
@@ -491,8 +543,8 @@ packages:
       '@types/node':
         optional: true
 
-  '@jssg/utils@0.0.2':
-    resolution: {integrity: sha512-eCQv5Xs9yfI6OKq2PQ8SyKsxPhdiaJY/XAFJmsZiVbsK5DIBBmGBA95CsyD4JFWXDKkNv6Q7ER/Kbp6/uWzB2w==}
+  '@jssg/utils@0.0.10':
+    resolution: {integrity: sha512-2QHspAMmJsz9tucZisSJfW/4CzEhsvLZfIJ6t4wVhSeUZ/sW8AGsVcKgHJr3ES+jc16jvmWfta0yk4kTFA8IPw==}
 
   '@manypkg/find-root@1.1.0':
     resolution: {integrity: sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA==}
@@ -966,7 +1018,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 25.6.0
 
-  '@jssg/utils@0.0.2': {}
+  '@jssg/utils@0.0.10': {}
 
   '@manypkg/find-root@1.1.0':
     dependencies:
