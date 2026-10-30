@@ -4,7 +4,7 @@
   "description": "Replace deprecated React.createFactory calls with JSX",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "test": "node ../../scripts/run-codemod.mjs jssg test -l tsx ./scripts/codemod.ts",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {

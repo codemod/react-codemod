@@ -4,7 +4,7 @@
   "description": "Rename unstable_/experimental_ React APIs that became stable in React 19.2 and 19.3 to their stable names",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "test": "node ../../scripts/run-codemod.mjs jssg test -l tsx ./scripts/codemod.ts",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {

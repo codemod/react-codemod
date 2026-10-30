@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
+const codemodRunner = path.resolve(packageDir, "../../scripts/run-codemod.mjs");
 const codemodFile = path.join(packageDir, "scripts/codemod.ts");
 const testsDir = path.join(packageDir, "tests");
 
@@ -36,11 +37,7 @@ function runJssgOutput(input, params = {}) {
   }
 
   try {
-    const result = spawnSync(
-      "pnpm",
-      [
-        "dlx",
-        "codemod@latest",
+    const result = spawnSync("node", [codemodRunner,
         "jssg",
         "test",
         "-l",

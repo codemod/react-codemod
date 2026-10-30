@@ -4,7 +4,7 @@
   "description": "Replace View.propTypes with ViewPropTypes",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts --strictness loose",
+    "test": "node ../../scripts/run-codemod.mjs jssg test -l tsx ./scripts/codemod.ts --strictness loose",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {

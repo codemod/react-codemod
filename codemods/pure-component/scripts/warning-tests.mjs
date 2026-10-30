@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
+const codemodRunner = path.resolve(packageDir, "../../scripts/run-codemod.mjs");
 const codemodFile = path.join(packageDir, "scripts/codemod.ts");
 
 function runFixtureTest(input, params = {}) {
@@ -21,11 +22,7 @@ function runFixtureTest(input, params = {}) {
   }
 
   try {
-    return spawnSync(
-      "pnpm",
-      [
-        "dlx",
-        "codemod@latest",
+    return spawnSync("node", [codemodRunner,
         "jssg",
         "test",
         "-l",

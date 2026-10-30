@@ -10,6 +10,7 @@ import { cases } from "./parity-cases.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const packageDir = path.dirname(path.dirname(__filename));
+const codemodRunner = path.resolve(packageDir, "../../scripts/run-codemod.mjs");
 const codemodPath = path.join(packageDir, "scripts", "codemod.ts");
 const resultsCache = new Map();
 
@@ -50,9 +51,7 @@ function runMode(mode) {
       writeFileSync(path.join(dir, filename), testCase.input, "utf8");
     }
 
-    const command = [
-      "dlx",
-      "codemod@latest",
+    const command = [codemodRunner,
       "jssg",
       "run",
       "--language",
@@ -67,7 +66,7 @@ function runMode(mode) {
       command.push("--param", `preserve-prop-types=${mode}`);
     }
 
-    const result = spawnSync("pnpm", command, {
+    const result = spawnSync("node", command, {
       cwd: packageDir,
       encoding: "utf8",
       timeout: 120000,
