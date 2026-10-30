@@ -1,0 +1,10 @@
+{
+  "fragment-ref-wrapper-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/single-quote-merge/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

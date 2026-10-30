@@ -1,7 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
+import { getAllImports, getImport, updateImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -48,11 +48,50 @@ function isReactRequireCall(node: SgNode<TSX> | null): boolean {
     stringValue(firstArg) === "react";
 }
 
-function isReactIdentifier(node: SgNode<TSX> | null): boolean {
-  return node?.kind() === "identifier" && node.text() === "React";
+function collectReactAliases(rootNode: SgNode<TSX, "program">): Set<string> {
+  const names = new Set<string>();
+  for (const binding of getAllImports(rootNode, { type: "default", from: "react" })) {
+    names.add(binding.alias);
+  }
+  return names;
 }
 
-function isReactDomFactoryMember(callee: SgNode<TSX>): { factory: string; target: string } | null {
+function isReactIdentifier(node: SgNode<TSX> | null, reactAliases: Set<string>): boolean {
+  return node?.kind() === "identifier" && reactAliases.has(node.text());
+}
+
+function collectDomLocalNames(
+  rootNode: SgNode<TSX, "program">,
+  reactAliases: Set<string>,
+): Set<string> {
+  const names = new Set<string>();
+  const reactDomImport = getImport(rootNode, { type: "named", name: "DOM", from: "react" });
+  if (reactDomImport && !reactDomImport.isNamespace) {
+    names.add(reactDomImport.alias);
+  }
+
+  for (const pattern of rootNode.findAll({ rule: { kind: "object_pattern" } })) {
+    if (!isReactDomDestructurePattern(pattern, reactAliases)) continue;
+    for (const shorthand of pattern.findAll({
+      rule: { kind: "shorthand_property_identifier_pattern" },
+    })) {
+      if (shorthand.text() === "DOM") names.add("DOM");
+    }
+    for (const pair of pattern.findAll({ rule: { kind: "pair_pattern" } })) {
+      if (pair.field("key")?.text() !== "DOM") continue;
+      const value = pair.field("value");
+      if (value && value.kind() === "identifier") names.add(value.text());
+    }
+  }
+
+  return names;
+}
+
+function isReactDomFactoryMember(
+  callee: SgNode<TSX>,
+  domLocalNames: Set<string>,
+  reactAliases: Set<string>,
+): { factory: string; target: string } | null {
   if (callee.kind() !== "member_expression") {
     return null;
   }
@@ -63,8 +102,11 @@ function isReactDomFactoryMember(callee: SgNode<TSX>): { factory: string; target
     return null;
   }
 
-  if (object.kind() === "identifier" && object.text() === "DOM") {
-    return { factory: property.text(), target: "createElement" };
+  if (object.kind() === "identifier" && domLocalNames.has(object.text())) {
+    // updateImport renames DOM → createElement and preserves any local alias.
+    // Destructured `DOM` shorthand is rewritten to `createElement` in place.
+    const target = object.text() === "DOM" ? "createElement" : object.text();
+    return { factory: property.text(), target };
   }
 
   if (object.kind() !== "member_expression") {
@@ -77,14 +119,17 @@ function isReactDomFactoryMember(callee: SgNode<TSX>): { factory: string; target
     return null;
   }
 
-  if (outerProperty.text() === "DOM" && isReactIdentifier(outerObject)) {
-    return { factory: property.text(), target: "React.createElement" };
+  if (outerProperty.text() === "DOM" && isReactIdentifier(outerObject, reactAliases)) {
+    return { factory: property.text(), target: `${outerObject.text()}.createElement` };
   }
 
   return null;
 }
 
-function isReactDomDestructurePattern(node: SgNode<TSX>): boolean {
+function isReactDomDestructurePattern(
+  node: SgNode<TSX>,
+  reactAliases: Set<string>,
+): boolean {
   if (node.kind() !== "object_pattern") {
     return false;
   }
@@ -95,7 +140,7 @@ function isReactDomDestructurePattern(node: SgNode<TSX>): boolean {
   }
 
   const init = declarator.field("value");
-  if (!(isReactIdentifier(init) || isReactRequireCall(init))) {
+  if (!(isReactIdentifier(init, reactAliases) || isReactRequireCall(init))) {
     return false;
   }
 
@@ -105,23 +150,15 @@ function isReactDomDestructurePattern(node: SgNode<TSX>): boolean {
 
 function matchedFactoryCallInfo(
   call: SgNode<TSX>,
-  hasReactDomBinding: boolean,
+  domLocalNames: Set<string>,
+  reactAliases: Set<string>,
 ): { factory: string; target: string } | null {
   const callee = call.field("function");
   if (!callee) {
     return null;
   }
 
-  const match = isReactDomFactoryMember(callee);
-  if (!match) {
-    return null;
-  }
-
-  if (match.target === "createElement" && !hasReactDomBinding) {
-    return null;
-  }
-
-  return match;
+  return isReactDomFactoryMember(callee, domLocalNames, reactAliases);
 }
 
 function applyInlineEdits(source: string, edits: InlineEdit[]): string {
@@ -133,11 +170,17 @@ function applyInlineEdits(source: string, edits: InlineEdit[]): string {
     );
 }
 
-function rewriteNodeText(node: SgNode<TSX>, hasReactDomBinding: boolean): string {
-  const callMatch = node.kind() === "call_expression" ? matchedFactoryCallInfo(node, hasReactDomBinding) : null;
+function rewriteNodeText(
+  node: SgNode<TSX>,
+  domLocalNames: Set<string>,
+  reactAliases: Set<string>,
+): string {
+  const callMatch = node.kind() === "call_expression"
+    ? matchedFactoryCallInfo(node, domLocalNames, reactAliases)
+    : null;
   if (callMatch) {
     const argsText = callArguments(node)
-      .map((arg) => rewriteNodeText(arg, hasReactDomBinding))
+      .map((arg) => rewriteNodeText(arg, domLocalNames, reactAliases))
       .join(", ");
     const prefix = argsText.length > 0 ? ", " : "";
     return `${callMatch.target}('${callMatch.factory}'${prefix}${argsText})`;
@@ -148,7 +191,7 @@ function rewriteNodeText(node: SgNode<TSX>, hasReactDomBinding: boolean): string
   const edits: InlineEdit[] = [];
 
   for (const child of namedChildren(node)) {
-    const rewritten = rewriteNodeText(child, hasReactDomBinding);
+    const rewritten = rewriteNodeText(child, domLocalNames, reactAliases);
     if (rewritten === child.text()) {
       continue;
     }
@@ -169,42 +212,33 @@ const transform: Transform<TSX> = async (root) => {
   const metric = useMetricAtom("react-dom-factory-replacements");
 
   const reactDomImport = getImport(rootNode, { type: "named", name: "DOM", from: "react" });
-  const hasReactDomPattern = rootNode.findAll({ rule: { kind: "object_pattern" } })
-    .some(isReactDomDestructurePattern);
-  const hasReactDomBinding = reactDomImport !== null || hasReactDomPattern;
+  const reactAliases = collectReactAliases(rootNode);
+  const domLocalNames = collectDomLocalNames(rootNode, reactAliases);
 
   const matchedCalls = rootNode.findAll({ rule: { kind: "call_expression" } })
-    .filter((call) => matchedFactoryCallInfo(call, hasReactDomBinding) !== null);
+    .filter((call) => matchedFactoryCallInfo(call, domLocalNames, reactAliases) !== null);
 
   for (const call of matchedCalls) {
     const hasMatchedAncestor = call.ancestors().some((ancestor) =>
       ancestor.kind() === "call_expression" &&
-      matchedFactoryCallInfo(ancestor, hasReactDomBinding) !== null
+      matchedFactoryCallInfo(ancestor, domLocalNames, reactAliases) !== null
     );
     if (hasMatchedAncestor) {
       continue;
     }
 
-    edits.push(call.replace(rewriteNodeText(call, hasReactDomBinding)));
+    edits.push(call.replace(rewriteNodeText(call, domLocalNames, reactAliases)));
   }
 
-  for (const importSpec of rootNode.findAll({ rule: { kind: "import_specifier" } })) {
-    const imported = importSpec.field("name");
-    if (!imported || imported.text() !== "DOM") {
-      continue;
+  if (reactDomImport && !reactDomImport.isNamespace) {
+    const importEdit = updateImport(rootNode, {
+      type: "named",
+      from: "react",
+      specifiers: [{ name: "DOM", to: "createElement" }],
+    });
+    if (importEdit) {
+      edits.push(importEdit);
     }
-
-    const importStmt = importSpec.ancestors().find((ancestor) => ancestor.kind() === "import_statement");
-    if (!importStmt) {
-      continue;
-    }
-
-    const source = importStmt.field("source");
-    if (!source || source.kind() !== "string" || stringValue(source) !== "react") {
-      continue;
-    }
-
-    edits.push(imported.replace("createElement"));
   }
 
   for (const shorthand of rootNode.findAll({ rule: { kind: "shorthand_property_identifier_pattern" } })) {
@@ -213,7 +247,7 @@ const transform: Transform<TSX> = async (root) => {
     }
 
     const pattern = shorthand.ancestors().find((ancestor) => ancestor.kind() === "object_pattern");
-    if (!pattern || !isReactDomDestructurePattern(pattern)) {
+    if (!pattern || !isReactDomDestructurePattern(pattern, reactAliases)) {
       continue;
     }
 

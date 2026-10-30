@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment } from 'react';
 
 export function Group({ ref, children }) {
   return (
