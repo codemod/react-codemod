@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "@codemod.com/jssg-types": "latest",
-    "typescript": "latest",
+    "typescript": "~5.9.3",
     "@types/node": "latest"
   },
   "dependencies": {

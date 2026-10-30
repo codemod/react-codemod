@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import ts from "typescript";
+import * as typescriptNs from "typescript";
+const ts = typescriptNs.default ?? typescriptNs;
 import { cases } from "./parity-cases.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
