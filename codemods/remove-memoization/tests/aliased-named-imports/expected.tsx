@@ -1,3 +1,3 @@
-const value = () => computeValue();
+const value = computeValue();
 const handler = () => value;
 const MemoizedWidget = Widget;
