@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "react-dom-to-react-dom-factories"
-version: "0.1.2"
+version: "0.1.3"
 description: "Replace React.DOM factories with createElement calls"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

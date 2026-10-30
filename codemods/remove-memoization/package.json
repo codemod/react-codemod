@@ -1,6 +1,6 @@
 {
   "name": "react-19-remove-memoization",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Remove manual React memoization calls for React Compiler adoption",
   "type": "module",
   "scripts": {

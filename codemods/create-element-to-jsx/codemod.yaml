@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "react-create-element-to-jsx"
-version: "0.1.2"
+version: "0.1.3"
 description: "Convert React.createElement calls to JSX"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"

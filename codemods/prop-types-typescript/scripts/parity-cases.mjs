@@ -1177,4 +1177,30 @@ export const MyComponent = (props: MyComponentProps) => {
 }
 `,
   },
+  {
+    name: "cjs-prop-types-require",
+    input: `const PropTypes = require("prop-types");
+import React from "react"
+
+export const MyComponent = (props) => {
+  return <span />
+}
+
+MyComponent.propTypes = {
+  bar: PropTypes.string.isRequired,
+  foo: PropTypes.number,
+}
+`,
+    expected: `import React from "react"
+
+interface MyComponentProps {
+  bar: string
+  foo?: number
+}
+
+export const MyComponent = (props: MyComponentProps) => {
+  return <span />
+}
+`,
+  },
 ];
