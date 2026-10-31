@@ -1,7 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
+import { getAllImports } from "@jssg/utils/javascript/imports";
 
 type Conversion = {
   code: string;
@@ -38,14 +38,16 @@ const REACT_MODULES = ["React", "react", "react/addons", "react-native"] as cons
 const REACT_MODULE_SET = new Set<string>(REACT_MODULES);
 
 /** Resolved per-transform from import/require bindings (supports `import * as R`). */
-let currentReactAlias = "React";
+let currentReactAliases = new Set<string>(["React"]);
 
-function resolveReactAlias(rootNode: SgNode<TSX, "program">): string {
+function resolveReactAliases(rootNode: SgNode<TSX, "program">): Set<string> {
+  const aliases = new Set<string>();
   for (const from of REACT_MODULES) {
-    const imp = getImport(rootNode, { type: "default", from });
-    if (imp) return imp.alias;
+    for (const imp of getAllImports(rootNode, { type: "default", from })) {
+      aliases.add(imp.alias);
+    }
   }
-  return "React";
+  return aliases.size > 0 ? aliases : new Set(["React"]);
 }
 
 function metricFile(filename: string): string {
@@ -180,7 +182,7 @@ function isReactCreateElementCall(node: SgNode<TSX>): boolean {
   const property = callee.field("property");
 
   return object?.kind() === "identifier" &&
-    object.text() === currentReactAlias &&
+    currentReactAliases.has(object.text()) &&
     property?.kind() === "property_identifier" &&
     property.text() === "createElement";
 }
@@ -502,7 +504,7 @@ function propsToDescriptors(node: SgNode<TSX> | null, source: string): {
     return { attrs: [], trailingElementComments: [], consumedBoundaryComments: [] };
   }
 
-  if (isMemberCall(node, currentReactAlias, "__spread") || isMemberCall(node, "Object", "assign")) {
+  if (isReactSpreadCall(node) || isMemberCall(node, "Object", "assign")) {
     const callee = node.field("function");
     const calleeObject = callee?.field("object") ?? null;
     const calleeProperty = callee?.field("property") ?? null;
@@ -758,12 +760,19 @@ function isMemberCall(node: SgNode<TSX>, objectName: string, propertyName: strin
     property.text() === propertyName;
 }
 
+function isReactSpreadCall(node: SgNode<TSX>): boolean {
+  for (const alias of currentReactAliases) {
+    if (isMemberCall(node, alias, "__spread")) return true;
+  }
+  return false;
+}
+
 function propsToAttributes(node: SgNode<TSX> | null): string[] {
   if (!node || node.kind() === "null") {
     return [];
   }
 
-  if (isMemberCall(node, currentReactAlias, "__spread") || isMemberCall(node, "Object", "assign")) {
+  if (isReactSpreadCall(node) || isMemberCall(node, "Object", "assign")) {
     return callArguments(node).flatMap((arg) => propsToAttributes(arg));
   }
 
@@ -1227,7 +1236,7 @@ const transform: Transform<TSX> = async (root, options) => {
     return null;
   }
 
-  currentReactAlias = resolveReactAlias(rootNode);
+  currentReactAliases = resolveReactAliases(rootNode);
 
   const canConvertCall = (call: SgNode<TSX>): boolean => {
     const cached = convertibility.get(call.id());

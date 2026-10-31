@@ -1178,6 +1178,69 @@ export const MyComponent = (props: MyComponentProps) => {
 `,
   },
   {
+    name: "separate-default-imports-keep-used-alias",
+    input: `import PropTypes from "prop-types"
+import PT from "prop-types"
+import React from "react"
+
+export const MyComponent = (props) => {
+  return <span />
+}
+
+MyComponent.propTypes = {
+  bar: PropTypes.string.isRequired,
+}
+
+export const shared = PT.string
+`,
+    expected: `import PT from "prop-types"
+import React from "react"
+
+interface MyComponentProps {
+  bar: string
+}
+
+export const MyComponent = (props: MyComponentProps) => {
+  return <span />
+}
+
+export const shared = PT.string
+`,
+  },
+  {
+    name: "multiline-prop-types-import-keep-used-type",
+    input: `import PropTypes, {
+  Validator,
+} from "prop-types"
+import React from "react"
+
+export const MyComponent = (props) => {
+  return <span />
+}
+
+MyComponent.propTypes = {
+  bar: PropTypes.string.isRequired,
+}
+
+export const validate: Validator<string> = () => null
+`,
+    expected: `import {
+  Validator,
+} from "prop-types"
+import React from "react"
+
+interface MyComponentProps {
+  bar: string
+}
+
+export const MyComponent = (props: MyComponentProps) => {
+  return <span />
+}
+
+export const validate: Validator<string> = () => null
+`,
+  },
+  {
     name: "cjs-prop-types-require",
     input: `const PropTypes = require("prop-types");
 import React from "react"

@@ -1,0 +1,10 @@
+{
+  "find-dom-node-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-default-react-aliases/input.tsx"
+      },
+      "count": 2
+    }
+  ]
+}

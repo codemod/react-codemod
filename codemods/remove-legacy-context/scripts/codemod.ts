@@ -24,22 +24,26 @@ type ReactImportInfo = {
   componentNames: Set<string>;
   reactObjectNames: Set<string>;
   preferredReactObjectName: string | null;
+  moduleType: "esm" | "cjs";
 };
 
 function collectReactImportInfo(rootNode: SgNode<TSX, "program">): ReactImportInfo {
   const componentNames = new Set<string>();
   const reactObjectNames = new Set<string>();
   let preferredReactObjectName: string | null = null;
+  let moduleType: "esm" | "cjs" | null = null;
 
   for (const imp of getAllImports(rootNode, { type: "default", from: "react" })) {
     reactObjectNames.add(imp.alias);
     preferredReactObjectName ??= imp.alias;
+    moduleType ??= imp.moduleType;
   }
 
   for (const name of ["Component", "PureComponent"] as const) {
     for (const imp of getAllImports(rootNode, { type: "named", name, from: "react" })) {
       if (!imp.isNamespace) {
         componentNames.add(imp.alias);
+        moduleType ??= imp.moduleType;
       }
     }
   }
@@ -48,6 +52,7 @@ function collectReactImportInfo(rootNode: SgNode<TSX, "program">): ReactImportIn
     componentNames,
     reactObjectNames,
     preferredReactObjectName,
+    moduleType: moduleType ?? "esm",
   };
 }
 
@@ -307,14 +312,15 @@ const transform: Transform<TSX> = async (root) => {
   }
 
   if (needsReactHelperImport && helperReactObjectName) {
-    const importEdit = addImport(rootNode, {
-      type: "namespace",
-      name: helperReactObjectName,
-      from: "react",
-    });
+    const importEdit = addImport(
+      rootNode,
+      reactImportInfo.moduleType === "cjs"
+        ? { type: "default", name: helperReactObjectName, from: "react", moduleType: "cjs" }
+        : { type: "namespace", name: helperReactObjectName, from: "react" },
+    );
     if (importEdit) {
-      const quoteMatch = source.match(/\bfrom\s+(['"])/);
-      const quote = quoteMatch?.[1] === "'" ? "'" : '"';
+      const quoteMatch = source.match(/\bfrom\s+(['"])|\brequire\(\s*(['"])/);
+      const quote = (quoteMatch?.[1] ?? quoteMatch?.[2]) === "'" ? "'" : '"';
       edits.push({
         ...importEdit,
         insertedText: importEdit.insertedText

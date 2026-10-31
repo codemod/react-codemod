@@ -1,0 +1,10 @@
+{
+  "pure-render-mixin-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-default-react-aliases/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

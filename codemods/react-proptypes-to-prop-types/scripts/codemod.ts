@@ -141,7 +141,8 @@ const transform: Transform<TSX> = async (root, options) => {
   const moduleName = (options.params?.["module-name"] as string | undefined) ?? "prop-types";
   const reactModules = ["react", "React"] as const;
   const reactNames = new Set<string>();
-  let localPropTypesName = "PropTypes";
+  let localPropTypesName =
+    getImport(rootNode, { type: "default", from: moduleName })?.alias ?? "PropTypes";
   let changed = false;
 
   const usesEsmImports = rootNode.findAll({ rule: { kind: "import_statement" } })

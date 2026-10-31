@@ -885,8 +885,7 @@ function collectPropTypesImports(rootNode: SgNode<TSX, "program">): PropTypesImp
   const imports: PropTypesImport[] = [];
   const seen = new Set<string>();
 
-  const defaultImp = getImport(rootNode, { type: "default", from: "prop-types" });
-  if (defaultImp) {
+  for (const defaultImp of getAllImports(rootNode, { type: "default", from: "prop-types" })) {
     const kind = defaultImp.isNamespace ? "namespace" : "default";
     const key = `${kind}:${defaultImp.alias}`;
     if (!seen.has(key)) {
@@ -954,37 +953,42 @@ function parseProgram(source: string): SgNode<TSX, "program"> {
   return parse<TSX>("tsx", source).root();
 }
 
+function isBindingReferenced(
+  program: SgNode<TSX, "program">,
+  binding: { alias: string; node: SgNode<TSX> },
+): boolean {
+  const bindingStart = binding.node.range().start.index;
+  return program
+    .findAll({
+      rule: {
+        any: [{ kind: "identifier" }, { kind: "type_identifier" }, { kind: "shorthand_property_identifier" }],
+        regex: `^${escapeRegExp(binding.alias)}$`,
+        not: { inside: { kind: "import_statement", stopBy: "end" } },
+      },
+    })
+    .some((node) => node.range().start.index !== bindingStart);
+}
+
 function cleanupPropTypesImports(source: string, imports: PropTypesImport[]): string {
   if (imports.length === 0) {
     return source;
   }
 
-  const hasRemainingUsage = imports.some(({ localName }) =>
-    new RegExp(`\\b${escapeRegExp(localName)}\\s*\\.`, "m").test(source)
-  );
-  if (hasRemainingUsage) {
-    return source;
-  }
-
   let nextSource = source;
 
-  // removeImport only clears one match per call — loop until gone.
+  // removeImport only targets the first default/namespace binding, so stop once that one is still referenced.
   while (true) {
     const program = parseProgram(nextSource);
     const defaultImp = getImport(program, { type: "default", from: "prop-types" });
-    if (!defaultImp || defaultImp.isNamespace) break;
-    const removeEdit = removeImport(program, { type: "default", from: "prop-types" });
+    if (!defaultImp || isBindingReferenced(program, defaultImp)) break;
+    const removeEdit = removeImport(program, {
+      type: defaultImp.isNamespace ? "namespace" : "default",
+      from: "prop-types",
+    });
     if (!removeEdit) break;
-    nextSource = program.commitEdits([removeEdit]);
-  }
-
-  while (true) {
-    const program = parseProgram(nextSource);
-    const namespaceImp = getImport(program, { type: "default", from: "prop-types" });
-    if (!namespaceImp?.isNamespace) break;
-    const removeEdit = removeImport(program, { type: "namespace", from: "prop-types" });
-    if (!removeEdit) break;
-    nextSource = program.commitEdits([removeEdit]);
+    const updated = program.commitEdits([removeEdit]);
+    if (updated === nextSource) break;
+    nextSource = updated;
   }
 
   const namedExports = [
@@ -1003,7 +1007,7 @@ function cleanupPropTypesImports(source: string, imports: PropTypesImport[]): st
         name: exportedName,
         from: "prop-types",
       }).filter((imp) => !imp.isNamespace);
-      if (remaining.length === 0) break;
+      if (remaining.length === 0 || remaining.some((imp) => isBindingReferenced(program, imp))) break;
 
       const removeEdit = removeImport(program, {
         type: "named",

@@ -129,7 +129,12 @@ const transform: Transform<TSX> = async (root) => {
     }
   }
 
-  if (activeLocalNames.has("useContext")) {
+  const needsImportRename = activeLocalNames.size > 0;
+  const hasUnaliasedImport = namedUseContextImports.some((entry) => entry.alias === "useContext");
+
+  // updateImport renames every useContext specifier, so the unaliased binding's
+  // references must follow whenever any alias triggers the import rename.
+  if (needsImportRename && hasUnaliasedImport) {
     const renameTargets = rootNode.findAll({
       rule: {
         any: [
@@ -166,7 +171,6 @@ const transform: Transform<TSX> = async (root) => {
     }, aliasedCallCount);
   }
 
-  const needsImportRename = activeLocalNames.size > 0;
   if (edits.length === 0 && !needsImportRename) {
     return null;
   }

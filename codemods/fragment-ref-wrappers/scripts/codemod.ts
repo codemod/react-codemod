@@ -165,7 +165,7 @@ const transform: Transform<TSX> = async (root) => {
   const reactBinding = getImport(rootNode, { type: "default", from: REACT_MODULE });
 
   let fragmentName: string;
-  if (fragmentImport) {
+  if (fragmentImport && !fragmentImport.isNamespace) {
     fragmentName = fragmentImport.alias;
   } else if (reactBinding) {
     fragmentName = `${reactBinding.alias}.Fragment`;

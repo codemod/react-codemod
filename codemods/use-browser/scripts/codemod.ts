@@ -521,10 +521,17 @@ function syncImports(
   }
 
   // removeImport drops one remaining named specifier per call when siblings stay.
-  while (dropFromReact.length > 0) {
+  while (true) {
+    // getImport falls back to a namespace binding for missing named specifiers,
+    // and removeImport throws when only that fallback remains.
+    const remaining = dropFromReact.filter((name) => {
+      const imp = getImport(program, { type: "named", name, from: REACT_MODULE });
+      return imp !== null && !imp.isNamespace;
+    });
+    if (remaining.length === 0) break;
     const removeEdit = removeImport(program, {
       type: "named",
-      specifiers: dropFromReact,
+      specifiers: remaining,
       from: REACT_MODULE,
     });
     if (!removeEdit) break;
@@ -564,12 +571,20 @@ const transform: Transform<TSX> = async (root) => {
   } else {
     const existingUse = bindings.named.get("use");
     const existingSuspense = bindings.named.get("Suspense");
-    if (!existingUse && isNameUsed(rootNode, "use")) return null;
-    if (!existingSuspense && isNameUsed(rootNode, "Suspense")) return null;
-    useName = existingUse ?? "use";
-    suspenseName = existingSuspense ?? "Suspense";
-    if (!existingSuspense) addToReact.push("Suspense");
-    if (!existingUse) addToReact.push("use");
+    // addImport skips names that getImport resolves to a namespace fallback,
+    // so reach missing exports through that namespace instead of importing them.
+    const fallbackNamespace = (name: string) => {
+      const imp = getImport(rootNode, { type: "named", name, from: REACT_MODULE });
+      return imp?.isNamespace ? imp.alias : null;
+    };
+    const useNamespace = existingUse ? null : fallbackNamespace("use");
+    const suspenseNamespace = existingSuspense ? null : fallbackNamespace("Suspense");
+    if (!existingUse && !useNamespace && isNameUsed(rootNode, "use")) return null;
+    if (!existingSuspense && !suspenseNamespace && isNameUsed(rootNode, "Suspense")) return null;
+    useName = existingUse ?? (useNamespace ? `${useNamespace}.use` : "use");
+    suspenseName = existingSuspense ?? (suspenseNamespace ? `${suspenseNamespace}.Suspense` : "Suspense");
+    if (!existingSuspense && !suspenseNamespace) addToReact.push("Suspense");
+    if (!existingUse && !useNamespace) addToReact.push("use");
   }
 
   const existingBrowser = bindings.domNamed.get("browser");

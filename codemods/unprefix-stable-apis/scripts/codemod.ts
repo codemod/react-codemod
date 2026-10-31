@@ -76,15 +76,17 @@ function isNameTaken(rootNode: SgNode<TSX, "program">, name: string, ignore: SgN
   });
 }
 
-type NamedRename = { name: string; to: string; alias?: string };
+type NamedRename = { name: string; to: string };
 
 function collectNamedRenames(rootNode: SgNode<TSX, "program">): {
   specifiers: NamedRename[];
+  aliasEdits: Edit[];
   localRenames: Map<string, string>;
   renames: number;
   handledStarts: Set<number>;
 } {
   const specifiers: NamedRename[] = [];
+  const aliasEdits: Edit[] = [];
   const localRenames = new Map<string, string>();
   const handledStarts = new Set<number>();
   let renames = 0;
@@ -107,20 +109,23 @@ function collectNamedRenames(rootNode: SgNode<TSX, "program">): {
       const parent = binding.node.parent();
       if (parent) handledStarts.add(parent.range().start.index);
 
+      // updateImport keys rename plans by exported name, so every plan for a name must be identical.
+      // A colliding local keeps its name through an explicit alias in the source, which updateImport preserves.
+      specifiers.push({ name: oldName, to: newName });
       const hasExplicitAlias = binding.alias !== oldName;
-      if (hasExplicitAlias) {
-        specifiers.push({ name: oldName, to: newName });
-      } else if (isNameTaken(rootNode, newName, binding.node)) {
-        specifiers.push({ name: oldName, to: newName, alias: oldName });
-      } else {
-        specifiers.push({ name: oldName, to: newName });
-        localRenames.set(oldName, newName);
+      if (!hasExplicitAlias) {
+        if (isNameTaken(rootNode, newName, binding.node)) {
+          const separator = isInsideImport(binding.node) ? " as " : ": ";
+          aliasEdits.push(binding.node.replace(`${oldName}${separator}${oldName}`));
+        } else {
+          localRenames.set(oldName, newName);
+        }
       }
       renames += 1;
     }
   }
 
-  return { specifiers, localRenames, renames, handledStarts };
+  return { specifiers, aliasEdits, localRenames, renames, handledStarts };
 }
 
 function applyNamedImportRenames(source: string, specifiers: NamedRename[]): string {
@@ -151,10 +156,12 @@ const transform: Transform<TSX> = async (root) => {
 
   const {
     specifiers,
+    aliasEdits,
     localRenames,
     renames: importRenames,
     handledStarts,
   } = collectNamedRenames(rootNode);
+  edits.push(...aliasEdits);
   let renames = importRenames;
 
   // Member access through the module object: React.unstable_ViewTransition, <React.unstable_Activity>.

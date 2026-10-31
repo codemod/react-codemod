@@ -1,7 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
+import { getAllImports } from "@jssg/utils/javascript/imports";
 import * as fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
@@ -72,10 +72,11 @@ function reactImportAliases(rootNode: SgNode<TSX, "program">): ReactImportAliase
 
   for (const from of REACT_SOURCES) {
     for (const exportName of ["Component", "PureComponent"] as const) {
-      const imp = getImport(rootNode, { type: "named", name: exportName, from });
-      if (!imp || imp.isNamespace) continue;
-      if (exportName === "Component") component.add(imp.alias);
-      else pureComponent.add(imp.alias);
+      for (const imp of getAllImports(rootNode, { type: "named", name: exportName, from })) {
+        if (imp.isNamespace) continue;
+        if (exportName === "Component") component.add(imp.alias);
+        else pureComponent.add(imp.alias);
+      }
     }
   }
 
@@ -85,8 +86,9 @@ function reactImportAliases(rootNode: SgNode<TSX, "program">): ReactImportAliase
 function resolveReactObjectAliases(rootNode: SgNode<TSX, "program">): Set<string> {
   const aliases = new Set<string>(["React"]);
   for (const from of REACT_SOURCES) {
-    const imp = getImport(rootNode, { type: "default", from });
-    if (imp) aliases.add(imp.alias);
+    for (const imp of getAllImports(rootNode, { type: "default", from })) {
+      aliases.add(imp.alias);
+    }
   }
   return aliases;
 }

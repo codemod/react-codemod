@@ -1,0 +1,10 @@
+{
+  "fragment-ref-wrapper-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/namespace-react-import/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}
