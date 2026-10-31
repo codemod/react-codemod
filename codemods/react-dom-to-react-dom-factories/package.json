@@ -1,6 +1,6 @@
 {
   "name": "react-dom-to-react-dom-factories",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Replace React.DOM factories with createElement calls",
   "type": "module",
   "scripts": {

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "react-19-remove-legacy-context"
-version: "0.1.3"
+version: "0.1.4"
 description: "Remove legacy childContextTypes/getChildContext usage from React class components"
 author: "Codemod <hello@codemod.com>"
 license: "MIT"
