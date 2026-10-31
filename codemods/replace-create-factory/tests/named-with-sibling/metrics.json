@@ -1,0 +1,11 @@
+{
+  "replace-create-factory-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/named-with-sibling/input.tsx",
+        "pattern": "createFactory"
+      },
+      "count": 1
+    }
+  ]
+}

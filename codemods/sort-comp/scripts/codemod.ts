@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports } from "@jssg/utils/javascript/imports";
 import * as fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
@@ -17,7 +18,8 @@ type ReactImportAliases = {
 
 type ReactSuperclassKind = "Component" | "PureComponent";
 
-const REACT_SOURCES = new Set(["react", "React", "react/addons", "react-native"]);
+const REACT_SOURCES = ["react", "React", "react/addons", "react-native"] as const;
+const REACT_SOURCE_SET = new Set<string>(REACT_SOURCES);
 
 function stringValue(node: SgNode<TSX>): string | null {
   const fragment = node.find({ rule: { kind: "string_fragment" } });
@@ -45,7 +47,7 @@ function importSource(node: SgNode<TSX>): string | null {
 }
 
 function isReactSource(importStmt: SgNode<TSX>): boolean {
-  return REACT_SOURCES.has(importSource(importStmt) ?? "");
+  return REACT_SOURCE_SET.has(importSource(importStmt) ?? "");
 }
 
 function hasReact(rootNode: SgNode<TSX, "program">): boolean {
@@ -54,7 +56,7 @@ function hasReact(rootNode: SgNode<TSX, "program">): boolean {
   }
 
   for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
-    if (REACT_SOURCES.has(requireSource(call) ?? "")) return true;
+    if (REACT_SOURCE_SET.has(requireSource(call) ?? "")) return true;
   }
 
   return false;
@@ -64,28 +66,37 @@ function explicitRequireDisabled(value: unknown): boolean {
   return value === false || value === "false";
 }
 
-function reactImportAliases(rootNode: SgNode<TSX>): ReactImportAliases {
+function reactImportAliases(rootNode: SgNode<TSX, "program">): ReactImportAliases {
   const component = new Set<string>();
   const pureComponent = new Set<string>();
 
-  for (const importStmt of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (!isReactSource(importStmt)) continue;
-
-    for (const specifier of importStmt.findAll({ rule: { kind: "import_specifier" } })) {
-      const imported = specifier.field("name")?.text();
-      const alias = specifier.field("alias")?.text() ?? imported;
-      if (!imported || !alias) continue;
-      if (imported === "Component") component.add(alias);
-      if (imported === "PureComponent") pureComponent.add(alias);
+  for (const from of REACT_SOURCES) {
+    for (const exportName of ["Component", "PureComponent"] as const) {
+      for (const imp of getAllImports(rootNode, { type: "named", name: exportName, from })) {
+        if (imp.isNamespace) continue;
+        if (exportName === "Component") component.add(imp.alias);
+        else pureComponent.add(imp.alias);
+      }
     }
   }
 
   return { component, pureComponent };
 }
 
+function resolveReactObjectAliases(rootNode: SgNode<TSX, "program">): Set<string> {
+  const aliases = new Set<string>(["React"]);
+  for (const from of REACT_SOURCES) {
+    for (const imp of getAllImports(rootNode, { type: "default", from })) {
+      aliases.add(imp.alias);
+    }
+  }
+  return aliases;
+}
+
 function reactSuperclassKind(
   classDecl: SgNode<TSX>,
   aliases: ReactImportAliases,
+  reactObjects: Set<string>,
 ): ReactSuperclassKind | null {
   const heritage = classDecl.find({ rule: { kind: "class_heritage" } });
   if (!heritage) return null;
@@ -98,7 +109,7 @@ function reactSuperclassKind(
   if (directExtends.kind() === "member_expression") {
     const object = directExtends.field("object");
     const property = directExtends.field("property")?.text() ?? "";
-    if (object?.text() !== "React") return null;
+    if (!object || object.kind() !== "identifier" || !reactObjects.has(object.text())) return null;
     if (property === "Component" || property === "PureComponent") return property;
     return null;
   }
@@ -109,21 +120,27 @@ function reactSuperclassKind(
   return null;
 }
 
-function isReactCreateClassCall(node: SgNode<TSX> | null): node is SgNode<TSX> {
+function isReactCreateClassCall(
+  node: SgNode<TSX> | null,
+  reactObjects: Set<string>,
+): node is SgNode<TSX> {
   if (!node || node.kind() !== "call_expression") return false;
   const callee = node.field("function");
   return callee?.kind() === "member_expression" &&
     callee.field("object")?.kind() === "identifier" &&
-    callee.field("object")?.text() === "React" &&
+    reactObjects.has(callee.field("object")!.text()) &&
     callee.field("property")?.kind() === "property_identifier" &&
     callee.field("property")?.text() === "createClass";
 }
 
-function reactCreateClassConfigs(rootNode: SgNode<TSX, "program">): SgNode<TSX>[] {
+function reactCreateClassConfigs(
+  rootNode: SgNode<TSX, "program">,
+  reactObjects: Set<string>,
+): SgNode<TSX>[] {
   const configs: SgNode<TSX>[] = [];
   for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
     const value = declarator.field("value");
-    if (!isReactCreateClassCall(value)) continue;
+    if (!isReactCreateClassCall(value, reactObjects)) continue;
     const args = value.field("arguments");
     const config = args?.children().find((child) => child.kind() === "object");
     if (config) configs.push(config);
@@ -133,8 +150,9 @@ function reactCreateClassConfigs(rootNode: SgNode<TSX, "program">): SgNode<TSX>[
 
 function reactClassBodies(rootNode: SgNode<TSX, "program">): SgNode<TSX>[] {
   const aliases = reactImportAliases(rootNode);
+  const reactObjects = resolveReactObjectAliases(rootNode);
   const reactClasses = rootNode.findAll({ rule: { kind: "class_declaration" } })
-    .map((classDecl) => ({ classDecl, kind: reactSuperclassKind(classDecl, aliases) }))
+    .map((classDecl) => ({ classDecl, kind: reactSuperclassKind(classDecl, aliases, reactObjects) }))
     .filter((entry): entry is { classDecl: SgNode<TSX>; kind: ReactSuperclassKind } => entry.kind !== null);
   const targetSuperclassKind = reactClasses.some((entry) => entry.kind === "Component")
     ? "Component"
@@ -603,7 +621,9 @@ const transform: Transform<TSX> = async (root, options) => {
     await getMethodsOrderFromEslint(root.filename()) ??
     DEFAULT_METHODS_ORDER;
 
-  for (const config of reactCreateClassConfigs(rootNode)) {
+  const reactObjects = resolveReactObjectAliases(rootNode);
+
+  for (const config of reactCreateClassConfigs(rootNode, reactObjects)) {
     const edit = replacementFor(config, collectChunks(config, source), methodsOrder, ",\n\n  ");
     if (edit) {
       edits.push(edit);

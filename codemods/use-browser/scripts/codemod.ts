@@ -1,6 +1,13 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import {
+  addImport,
+  getAllImports,
+  getImport,
+  removeImport,
+} from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -10,19 +17,23 @@ function metricFile(filename: string): string {
 const REACT_MODULE = "react";
 const REACT_DOM_MODULE = "react-dom";
 const EFFECT_HOOKS = new Set(["useEffect", "useLayoutEffect"]);
+const REACT_NAMED_EXPORTS = [
+  "useState",
+  "useEffect",
+  "useLayoutEffect",
+  "use",
+  "Suspense",
+] as const;
 
 type ReactBindings = {
   /** Local names that refer to the React module object (default or namespace import). */
   namespaces: Set<string>;
   /** React export name -> local name for named imports. */
   named: Map<string, string>;
-  /** The first ESM import from "react" (used to add specifiers). */
-  firstImport: SgNode<TSX> | null;
-  /** The first ESM import from "react-dom" that has named imports. */
-  firstDomNamedImport: SgNode<TSX> | null;
   /** react-dom export name -> local name for named imports. */
   domNamed: Map<string, string>;
-  lastImport: SgNode<TSX> | null;
+  /** True when an ESM react binding exists. */
+  hasReactEsm: boolean;
 };
 
 type HookCall = { style: "named"; localName: string } | { style: "member"; object: string };
@@ -45,67 +56,48 @@ type ComponentMatch = {
   pattern: MountedPattern;
 };
 
+function parseProgram(source: string): SgNode<TSX, "program"> {
+  return parse<TSX>("tsx", source).root();
+}
+
 function namedChildren(node: SgNode<TSX> | null): SgNode<TSX>[] {
   if (!node) return [];
   return node.children().filter((child) => child.isNamed() && child.kind() !== "comment");
-}
-
-function sourceText(node: SgNode<TSX>): string | null {
-  const fragment = node.find({ rule: { kind: "string_fragment" } });
-  if (fragment) return fragment.text();
-  const text = node.text();
-  return text.length >= 2 ? text.slice(1, -1) : null;
-}
-
-function importSource(node: SgNode<TSX>): string | null {
-  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
-  return source ? sourceText(source) : null;
-}
-
-function isTypeOnlyImport(node: SgNode<TSX>): boolean {
-  return node.children().some((child) => !child.isNamed() && child.text() === "type");
-}
-
-function quoteOf(importNode: SgNode<TSX> | null): string {
-  const source = importNode?.field("source") ?? importNode?.find({ rule: { kind: "string" } });
-  return source?.text().startsWith("'") ? "'" : '"';
 }
 
 function collectReactBindings(rootNode: SgNode<TSX, "program">): ReactBindings {
   const bindings: ReactBindings = {
     namespaces: new Set(),
     named: new Map(),
-    firstImport: null,
-    firstDomNamedImport: null,
     domNamed: new Map(),
-    lastImport: null,
+    hasReactEsm: false,
   };
 
-  for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (imp.parent()?.kind() !== "program") continue;
-    bindings.lastImport = imp;
-    const source = importSource(imp);
-    if (source !== REACT_MODULE && source !== REACT_DOM_MODULE) continue;
-    if (isTypeOnlyImport(imp)) continue;
+  for (const imp of getAllImports(rootNode, { type: "default", from: REACT_MODULE })) {
+    if (imp.moduleType !== "esm") continue;
+    bindings.hasReactEsm = true;
+    bindings.namespaces.add(imp.alias);
+  }
 
-    const named = source === REACT_MODULE ? bindings.named : bindings.domNamed;
-    for (const specifier of imp.findAll({ rule: { kind: "import_specifier" } })) {
-      const name = specifier.field("name")?.text();
-      if (!name) continue;
-      named.set(name, specifier.field("alias")?.text() ?? name);
+  for (const exportName of REACT_NAMED_EXPORTS) {
+    for (const imp of getAllImports(rootNode, {
+      type: "named",
+      name: exportName,
+      from: REACT_MODULE,
+    })) {
+      if (imp.moduleType !== "esm" || imp.isNamespace) continue;
+      bindings.hasReactEsm = true;
+      bindings.named.set(exportName, imp.alias);
     }
+  }
 
-    if (source === REACT_MODULE) {
-      if (!bindings.firstImport) bindings.firstImport = imp;
-      const importClause = imp.find({ rule: { kind: "import_clause" } });
-      const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-      if (defaultIdentifier) bindings.namespaces.add(defaultIdentifier.text());
-      const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
-      const namespaceName = namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
-      if (namespaceName) bindings.namespaces.add(namespaceName.text());
-    } else if (!bindings.firstDomNamedImport && imp.find({ rule: { kind: "named_imports" } })) {
-      bindings.firstDomNamedImport = imp;
-    }
+  const browserImp = getImport(rootNode, {
+    type: "named",
+    name: "browser",
+    from: REACT_DOM_MODULE,
+  });
+  if (browserImp && !browserImp.isNamespace && browserImp.moduleType === "esm") {
+    bindings.domNamed.set("browser", browserImp.alias);
   }
 
   return bindings;
@@ -258,19 +250,6 @@ function matchGuardStatement(
   }
   if (fallback && (fallback.kind() === "null" || fallback.kind() === "undefined")) fallback = null;
   return { fallback };
-}
-
-/** Insert a specifier at the end of a `{ ... }` named-imports list, keeping the existing spacing. */
-function appendSpecifierEdit(namedImports: SgNode<TSX>, specifier: string): Edit {
-  const text = namedImports.text();
-  let insertPos = namedImports.range().end.index - 1;
-  let offset = text.length - 1;
-  while (offset > 0 && /\s/.test(text[offset - 1] ?? "")) {
-    offset--;
-    insertPos--;
-  }
-  const inner = text.slice(1, -1).trim();
-  return { startPos: insertPos, endPos: insertPos, insertedText: inner.length > 0 ? `, ${specifier}` : ` ${specifier} ` };
 }
 
 function countIdentifiers(scope: SgNode<TSX> | SgNode<TSX, "program">, name: string, exclude: SgNode<TSX>[]): number {
@@ -492,28 +471,75 @@ function isNameUsed(rootNode: SgNode<TSX, "program">, name: string): boolean {
   }) !== null;
 }
 
-function rebuildImport(
-  importNode: SgNode<TSX>,
-  drop: Set<string>,
-  add: string[],
-  source: string,
-): string {
-  const quote = quoteOf(importNode);
-  const importClause = importNode.find({ rule: { kind: "import_clause" } });
-  const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-  const namespaceImport = importNode.find({ rule: { kind: "namespace_import" } });
-  const specifiers = importNode
-    .findAll({ rule: { kind: "import_specifier" } })
-    .filter((specifier) => !drop.has(specifier.field("name")?.text() ?? ""))
-    .map((specifier) => specifier.text());
-  const named = [...specifiers, ...add];
+function preferredQuote(source: string): '"' | "'" {
+  const match = source.match(/\bfrom\s+(['"])/);
+  return match?.[1] === "'" ? "'" : '"';
+}
 
-  const clauses: string[] = [];
-  if (defaultIdentifier) clauses.push(defaultIdentifier.text());
-  if (namespaceImport) clauses.push(namespaceImport.text());
-  if (named.length > 0) clauses.push(`{ ${named.join(", ")} }`);
-  if (clauses.length === 0) return "";
-  return `import ${clauses.join(", ")} from ${quote}${source}${quote};`;
+function withQuoteStyle(edit: Edit, quote: '"' | "'"): Edit {
+  return {
+    ...edit,
+    insertedText: edit.insertedText
+      .replace(/"([^"]+)"/g, `${quote}$1${quote}`)
+      .replace(/'([^']+)'/g, `${quote}$1${quote}`),
+  };
+}
+
+function syncImports(
+  source: string,
+  dropFromReact: string[],
+  addToReact: string[],
+  needBrowser: boolean,
+): string {
+  let program = parseProgram(source);
+  let next = source;
+  const quote = preferredQuote(source);
+
+  // Add before remove so merges keep existing react/react-dom statement order.
+  if (addToReact.length > 0) {
+    const addEdit = addImport(program, {
+      type: "named",
+      specifiers: addToReact.map((name) => ({ name })),
+      from: REACT_MODULE,
+    });
+    if (addEdit) {
+      next = program.commitEdits([withQuoteStyle(addEdit, quote)]);
+      program = parseProgram(next);
+    }
+  }
+
+  if (needBrowser) {
+    const browserEdit = addImport(program, {
+      type: "named",
+      specifiers: [{ name: "browser" }],
+      from: REACT_DOM_MODULE,
+    });
+    if (browserEdit) {
+      next = program.commitEdits([withQuoteStyle(browserEdit, quote)]);
+      program = parseProgram(next);
+    }
+  }
+
+  // removeImport drops one remaining named specifier per call when siblings stay.
+  while (true) {
+    // getImport falls back to a namespace binding for missing named specifiers,
+    // and removeImport throws when only that fallback remains.
+    const remaining = dropFromReact.filter((name) => {
+      const imp = getImport(program, { type: "named", name, from: REACT_MODULE });
+      return imp !== null && !imp.isNamespace;
+    });
+    if (remaining.length === 0) break;
+    const removeEdit = removeImport(program, {
+      type: "named",
+      specifiers: remaining,
+      from: REACT_MODULE,
+    });
+    if (!removeEdit) break;
+    next = program.commitEdits([removeEdit]);
+    program = parseProgram(next);
+  }
+
+  return next;
 }
 
 const transform: Transform<TSX> = async (root) => {
@@ -522,8 +548,7 @@ const transform: Transform<TSX> = async (root) => {
   const metric = useMetricAtom("use-browser-transformations");
 
   const bindings = collectReactBindings(rootNode);
-  const reactImport = bindings.firstImport;
-  if (!reactImport) return null;
+  if (!bindings.hasReactEsm) return null;
 
   const candidates = findComponents(rootNode, bindings);
   if (candidates.length === 0) return null;
@@ -546,12 +571,20 @@ const transform: Transform<TSX> = async (root) => {
   } else {
     const existingUse = bindings.named.get("use");
     const existingSuspense = bindings.named.get("Suspense");
-    if (!existingUse && isNameUsed(rootNode, "use")) return null;
-    if (!existingSuspense && isNameUsed(rootNode, "Suspense")) return null;
-    useName = existingUse ?? "use";
-    suspenseName = existingSuspense ?? "Suspense";
-    if (!existingSuspense) addToReact.push("Suspense");
-    if (!existingUse) addToReact.push("use");
+    // addImport skips names that getImport resolves to a namespace fallback,
+    // so reach missing exports through that namespace instead of importing them.
+    const fallbackNamespace = (name: string) => {
+      const imp = getImport(rootNode, { type: "named", name, from: REACT_MODULE });
+      return imp?.isNamespace ? imp.alias : null;
+    };
+    const useNamespace = existingUse ? null : fallbackNamespace("use");
+    const suspenseNamespace = existingSuspense ? null : fallbackNamespace("Suspense");
+    if (!existingUse && !useNamespace && isNameUsed(rootNode, "use")) return null;
+    if (!existingSuspense && !suspenseNamespace && isNameUsed(rootNode, "Suspense")) return null;
+    useName = existingUse ?? (useNamespace ? `${useNamespace}.use` : "use");
+    suspenseName = existingSuspense ?? (suspenseNamespace ? `${suspenseNamespace}.Suspense` : "Suspense");
+    if (!existingSuspense && !suspenseNamespace) addToReact.push("Suspense");
+    if (!existingUse && !useNamespace) addToReact.push("use");
   }
 
   const existingBrowser = bindings.domNamed.get("browser");
@@ -631,53 +664,24 @@ const transform: Transform<TSX> = async (root) => {
 
   // Imports: drop hooks that are no longer referenced, add use/Suspense/browser.
   const removedNodes = transformed.flatMap((match) => [match.pattern.stateStmt, match.pattern.effectStmt]);
-  const dropFromReact = new Set<string>();
+  const dropFromReact: string[] = [];
   for (const hook of ["useState", ...EFFECT_HOOKS]) {
     const localName = bindings.named.get(hook);
     if (!localName) continue;
     const remaining = countIdentifiers(rootNode, localName, removedNodes) - 1; // minus the import specifier itself
-    if (remaining <= 0) dropFromReact.add(hook);
+    if (remaining <= 0) dropFromReact.push(hook);
   }
 
-  const quote = quoteOf(reactImport);
-  const browserImport = existingBrowser ? "" : `import { ${browserName} } from ${quote}${REACT_DOM_MODULE}${quote};`;
-
-  let browserImportAdded = existingBrowser !== undefined;
-  if (!browserImportAdded && bindings.firstDomNamedImport) {
-    const namedImports = bindings.firstDomNamedImport.find({ rule: { kind: "named_imports" } });
-    if (namedImports) {
-      edits.push(appendSpecifierEdit(namedImports, browserName));
-      browserImportAdded = true;
-    }
-  }
-
-  const reactImportsToClean = rootNode
-    .findAll({ rule: { kind: "import_statement" } })
-    .filter((imp) => imp.parent()?.kind() === "program" && importSource(imp) === REACT_MODULE && !isTypeOnlyImport(imp));
-
-  for (const imp of reactImportsToClean) {
-    const isFirst = imp.id() === reactImport.id();
-    const specifierNames = imp
-      .findAll({ rule: { kind: "import_specifier" } })
-      .map((specifier) => specifier.field("name")?.text() ?? "");
-    const needsDrop = specifierNames.some((name) => dropFromReact.has(name));
-    const adds = isFirst ? addToReact : [];
-    const trailing = isFirst && !browserImportAdded ? browserImport : "";
-    if (!needsDrop && adds.length === 0 && trailing === "") continue;
-
-    const rebuilt = rebuildImport(imp, dropFromReact, adds, REACT_MODULE);
-    if (rebuilt === "" && trailing === "") {
-      const [start, end] = statementLineRange(source, imp);
-      edits.push({ startPos: start, endPos: end, insertedText: "" });
-    } else {
-      const text = [rebuilt, trailing].filter((part) => part !== "").join("\n");
-      edits.push(imp.replace(text));
-    }
-    if (isFirst) browserImportAdded = true;
-  }
+  const bodySource = rootNode.commitEdits(edits);
+  const next = syncImports(
+    bodySource,
+    dropFromReact,
+    addToReact,
+    existingBrowser === undefined,
+  );
 
   metric.increment({ file: metricFile(root.filename()) }, transformed.length);
-  return rootNode.commitEdits(edits);
+  return next;
 };
 
 export default transform;

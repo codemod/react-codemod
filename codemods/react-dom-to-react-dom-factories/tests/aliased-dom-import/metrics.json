@@ -1,0 +1,10 @@
+{
+  "react-dom-factory-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/aliased-dom-import/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

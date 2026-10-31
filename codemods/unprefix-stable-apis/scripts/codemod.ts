@@ -1,6 +1,8 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports, updateImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -26,57 +28,32 @@ function stableName(name: string | undefined): string | null {
   return Object.prototype.hasOwnProperty.call(RENAMES, name) ? RENAMES[name] ?? null : null;
 }
 
-function namedChildren(node: SgNode<TSX> | null): SgNode<TSX>[] {
-  if (!node) return [];
-  return node.children().filter((child) => child.isNamed() && child.kind() !== "comment");
-}
-
-function sourceText(node: SgNode<TSX>): string | null {
-  const fragment = node.find({ rule: { kind: "string_fragment" } });
-  if (fragment) return fragment.text();
-  const text = node.text();
-  return text.length >= 2 ? text.slice(1, -1) : null;
-}
-
-function importSource(node: SgNode<TSX>): string | null {
-  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
-  return source ? sourceText(source) : null;
-}
-
-function isReactRequireCall(node: SgNode<TSX> | null): boolean {
-  if (!node || node.kind() !== "call_expression") return false;
-  const fn = node.field("function");
-  if (!fn || fn.kind() !== "identifier" || fn.text() !== "require") return false;
-  const args = namedChildren(node.field("arguments"));
-  const first = args[0];
-  return args.length === 1 && !!first && first.kind() === "string" && sourceText(first) === REACT_MODULE;
-}
-
 function isInsideImport(node: SgNode<TSX>): boolean {
   return node.ancestors().some((ancestor) => ancestor.kind() === "import_statement");
+}
+
+function isInsideReactRequireDestructure(node: SgNode<TSX>): boolean {
+  return node.ancestors().some((ancestor) => {
+    if (ancestor.kind() !== "variable_declarator") return false;
+    const name = ancestor.field("name");
+    if (!name || name.kind() !== "object_pattern") return false;
+    const init = ancestor.field("value");
+    if (!init || init.kind() !== "call_expression") return false;
+    const fn = init.field("function");
+    if (!fn || fn.kind() !== "identifier" || fn.text() !== "require") return false;
+    const args = init.field("arguments");
+    const firstString = args?.find({ rule: { kind: "string" } });
+    const fragment = firstString?.find({ rule: { kind: "string_fragment" } });
+    return fragment?.text() === REACT_MODULE;
+  });
 }
 
 /** Local names that refer to the React module object (default import, namespace import, require binding). */
 function findReactNamespaceBindings(rootNode: SgNode<TSX, "program">): Set<string> {
   const names = new Set<string>();
-
-  for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(imp) !== REACT_MODULE) continue;
-    const importClause = imp.find({ rule: { kind: "import_clause" } });
-    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) names.add(defaultIdentifier.text());
-    const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
-    const namespaceName = namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
-    if (namespaceName) names.add(namespaceName.text());
+  for (const binding of getAllImports(rootNode, { type: "default", from: REACT_MODULE })) {
+    names.add(binding.alias);
   }
-
-  for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
-    const name = declarator.field("name");
-    if (name && name.kind() === "identifier" && isReactRequireCall(declarator.field("value"))) {
-      names.add(name.text());
-    }
-  }
-
   return names;
 }
 
@@ -99,83 +76,103 @@ function isNameTaken(rootNode: SgNode<TSX, "program">, name: string, ignore: SgN
   });
 }
 
+type NamedRename = { name: string; to: string };
+
+function collectNamedRenames(rootNode: SgNode<TSX, "program">): {
+  specifiers: NamedRename[];
+  aliasEdits: Edit[];
+  localRenames: Map<string, string>;
+  renames: number;
+  handledStarts: Set<number>;
+} {
+  const specifiers: NamedRename[] = [];
+  const aliasEdits: Edit[] = [];
+  const localRenames = new Map<string, string>();
+  const handledStarts = new Set<number>();
+  let renames = 0;
+  const seen = new Set<string>();
+
+  for (const [oldName, newName] of Object.entries(RENAMES)) {
+    for (const binding of getAllImports(rootNode, {
+      type: "named",
+      name: oldName,
+      from: REACT_MODULE,
+    })) {
+      // Named queries fall back to namespace imports when no specifier matches.
+      if (binding.isNamespace) continue;
+
+      const key = `${binding.node.range().start.index}:${oldName}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      handledStarts.add(binding.node.range().start.index);
+      const parent = binding.node.parent();
+      if (parent) handledStarts.add(parent.range().start.index);
+
+      // updateImport keys rename plans by exported name, so every plan for a name must be identical.
+      // A colliding local keeps its name through an explicit alias in the source, which updateImport preserves.
+      specifiers.push({ name: oldName, to: newName });
+      const hasExplicitAlias = binding.alias !== oldName;
+      if (!hasExplicitAlias) {
+        if (isNameTaken(rootNode, newName, binding.node)) {
+          const separator = isInsideImport(binding.node) ? " as " : ": ";
+          aliasEdits.push(binding.node.replace(`${oldName}${separator}${oldName}`));
+        } else {
+          localRenames.set(oldName, newName);
+        }
+      }
+      renames += 1;
+    }
+  }
+
+  return { specifiers, aliasEdits, localRenames, renames, handledStarts };
+}
+
+function applyNamedImportRenames(source: string, specifiers: NamedRename[]): string {
+  if (specifiers.length === 0) return source;
+
+  let current = source;
+  let program = parse<TSX>("tsx", current).root();
+
+  // updateImport rewrites one clause per call; loop until every clause is updated.
+  while (true) {
+    const edit = updateImport(program, {
+      type: "named",
+      from: REACT_MODULE,
+      specifiers,
+    });
+    if (!edit) break;
+    current = program.commitEdits([edit]);
+    program = parse<TSX>("tsx", current).root();
+  }
+
+  return current;
+}
+
 const transform: Transform<TSX> = async (root) => {
   const rootNode = root.root();
   const edits: Edit[] = [];
   const metric = useMetricAtom("unprefix-stable-apis-renames");
-  let renames = 0;
 
-  // Old local name -> new local name, for bindings whose local identifier changes.
-  const localRenames = new Map<string, string>();
-  // Ranges of nodes we already rewrote, so the usage-site pass skips them.
-  const handledStarts = new Set<number>();
+  const {
+    specifiers,
+    aliasEdits,
+    localRenames,
+    renames: importRenames,
+    handledStarts,
+  } = collectNamedRenames(rootNode);
+  edits.push(...aliasEdits);
+  let renames = importRenames;
 
-  // 1. ESM named imports from "react".
-  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(importNode) !== REACT_MODULE) continue;
-
-    for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
-      const nameNode = specifier.field("name");
-      const newName = stableName(nameNode?.text());
-      if (!nameNode || !newName) continue;
-      const oldName = nameNode.text();
-      const alias = specifier.field("alias");
-
-      if (alias) {
-        edits.push(specifier.replace(alias.text() === newName ? newName : `${newName} as ${alias.text()}`));
-      } else if (isNameTaken(rootNode, newName, specifier)) {
-        edits.push(specifier.replace(`${newName} as ${oldName}`));
-      } else {
-        edits.push(specifier.replace(newName));
-        localRenames.set(oldName, newName);
-      }
-      handledStarts.add(specifier.range().start.index);
-      renames++;
-    }
-  }
-
-  // 2. CommonJS destructuring: const { unstable_ViewTransition } = require("react").
-  for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
-    const pattern = declarator.field("name");
-    if (!pattern || pattern.kind() !== "object_pattern" || !isReactRequireCall(declarator.field("value"))) continue;
-
-    for (const entry of namedChildren(pattern)) {
-      if (entry.kind() === "pair_pattern") {
-        const key = entry.field("key");
-        const newName = stableName(key?.text());
-        if (!key || !newName) continue;
-        const value = entry.field("value");
-        if (value && value.kind() === "identifier" && value.text() === newName) {
-          // { unstable_ViewTransition: ViewTransition } -> { ViewTransition }
-          edits.push(entry.replace(newName));
-        } else {
-          edits.push(key.replace(newName));
-        }
-        handledStarts.add(entry.range().start.index);
-        renames++;
-      } else if (entry.kind() === "shorthand_property_identifier_pattern") {
-        const oldName = entry.text();
-        const newName = stableName(oldName);
-        if (!newName) continue;
-        if (isNameTaken(rootNode, newName, entry)) {
-          edits.push(entry.replace(`${newName}: ${oldName}`));
-        } else {
-          edits.push(entry.replace(newName));
-          localRenames.set(oldName, newName);
-        }
-        handledStarts.add(entry.range().start.index);
-        renames++;
-      }
-    }
-  }
-
-  // 3. Member access through the module object: React.unstable_ViewTransition, <React.unstable_Activity>.
+  // Member access through the module object: React.unstable_ViewTransition, <React.unstable_Activity>.
   const namespaceBindings = findReactNamespaceBindings(rootNode);
   if (namespaceBindings.size > 0) {
     for (const member of rootNode.findAll({ rule: { kind: "member_expression" } })) {
       const object = member.field("object");
       const property = member.field("property");
-      if (!object || !property || object.kind() !== "identifier" || !namespaceBindings.has(object.text())) continue;
+      if (!object || !property || object.kind() !== "identifier" || !namespaceBindings.has(object.text())) {
+        continue;
+      }
       const newName = stableName(property.text());
       if (!newName) continue;
       edits.push(property.replace(newName));
@@ -183,7 +180,7 @@ const transform: Transform<TSX> = async (root) => {
     }
   }
 
-  // 4. Usage sites of bindings whose local name changed.
+  // Usage sites of bindings whose local name changed.
   for (const [oldName, newName] of localRenames) {
     const usages = rootNode.findAll({
       rule: {
@@ -197,7 +194,10 @@ const transform: Transform<TSX> = async (root) => {
 
     for (const usage of usages) {
       if (isInsideImport(usage)) continue;
-      if (usage.ancestors().some((ancestor) => handledStarts.has(ancestor.range().start.index))) continue;
+      if (isInsideReactRequireDestructure(usage)) continue;
+      if (usage.ancestors().some((ancestor) => handledStarts.has(ancestor.range().start.index))) {
+        continue;
+      }
       if (handledStarts.has(usage.range().start.index)) continue;
 
       const parent = usage.parent();
@@ -221,10 +221,15 @@ const transform: Transform<TSX> = async (root) => {
     }
   }
 
-  if (edits.length === 0) return null;
+  if (edits.length === 0 && specifiers.length === 0) return null;
+
+  let source = edits.length > 0 ? rootNode.commitEdits(edits) : rootNode.text();
+  source = applyNamedImportRenames(source, specifiers);
+
+  if (source === rootNode.text()) return null;
 
   metric.increment({ file: metricFile(root.filename()) }, renames);
-  return rootNode.commitEdits(edits);
+  return source;
 };
 
 export default transform;

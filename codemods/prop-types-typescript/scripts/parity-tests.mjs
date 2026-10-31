@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import ts from "typescript";
+import ts from "@typescript/typescript6";
 import { cases } from "./parity-cases.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,8 +51,6 @@ function runMode(mode) {
     }
 
     const command = [
-      "dlx",
-      "codemod@latest",
       "jssg",
       "run",
       "--language",
@@ -67,7 +65,7 @@ function runMode(mode) {
       command.push("--param", `preserve-prop-types=${mode}`);
     }
 
-    const result = spawnSync("pnpm", command, {
+    const result = spawnSync("codemod", command, {
       cwd: packageDir,
       encoding: "utf8",
       timeout: 120000,

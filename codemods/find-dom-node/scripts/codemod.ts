@@ -1,8 +1,10 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports } from "@jssg/utils/javascript/imports";
 
-const REACT_MODULES = new Set(["React", "react", "react/addons", "react-native"]);
+const REACT_MODULES = ["React", "react", "react/addons", "react-native"] as const;
+const REACT_MODULE_SET = new Set<string>(REACT_MODULES);
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -36,28 +38,43 @@ function importSource(node: SgNode<TSX>): string | null {
 
 function hasReact(rootNode: SgNode<TSX, "program">): boolean {
   for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (REACT_MODULES.has(importSource(importNode) ?? "")) return true;
+    if (REACT_MODULE_SET.has(importSource(importNode) ?? "")) return true;
   }
 
   for (const call of rootNode.findAll({ rule: { kind: "call_expression" } })) {
-    if (REACT_MODULES.has(requireSource(call) ?? "")) return true;
+    if (REACT_MODULE_SET.has(requireSource(call) ?? "")) return true;
   }
 
   return false;
+}
+
+function resolveReactAliases(rootNode: SgNode<TSX, "program">): Set<string> {
+  const aliases = new Set<string>();
+  for (const from of REACT_MODULES) {
+    for (const imp of getAllImports(rootNode, { type: "default", from })) {
+      aliases.add(imp.alias);
+    }
+  }
+  return aliases.size > 0 ? aliases : new Set(["React"]);
 }
 
 function explicitRequireDisabled(value: unknown): boolean {
   return value === false || value === "false";
 }
 
-function isReactCreateClassCall(node: SgNode<TSX> | null): node is SgNode<TSX> {
-  if (!node || node.kind() !== "call_expression") return false;
+function reactCreateClassAlias(
+  node: SgNode<TSX> | null,
+  reactAliases: Set<string>,
+): string | null {
+  if (!node || node.kind() !== "call_expression") return null;
   const callee = node.field("function");
-  return callee?.kind() === "member_expression" &&
-    callee.field("object")?.kind() === "identifier" &&
-    callee.field("object")?.text() === "React" &&
+  const object = callee?.field("object");
+  const isCreateClass = callee?.kind() === "member_expression" &&
+    object?.kind() === "identifier" &&
+    reactAliases.has(object.text()) &&
     callee.field("property")?.kind() === "property_identifier" &&
     callee.field("property")?.text() === "createClass";
+  return isCreateClass ? object!.text() : null;
 }
 
 function isModuleExportsMember(node: SgNode<TSX> | null): boolean {
@@ -68,17 +85,21 @@ function isModuleExportsMember(node: SgNode<TSX> | null): boolean {
     node.field("property")?.text() === "exports";
 }
 
-function createClassContainers(rootNode: SgNode<TSX, "program">): SgNode<TSX>[] {
-  const containers: SgNode<TSX>[] = [];
+function createClassContainers(
+  rootNode: SgNode<TSX, "program">,
+  reactAliases: Set<string>,
+): Array<{ container: SgNode<TSX>; reactAlias: string }> {
+  const containers: Array<{ container: SgNode<TSX>; reactAlias: string }> = [];
 
   for (const declarator of rootNode.findAll({ rule: { kind: "variable_declarator" } })) {
-    if (isReactCreateClassCall(declarator.field("value"))) containers.push(declarator);
+    const reactAlias = reactCreateClassAlias(declarator.field("value"), reactAliases);
+    if (reactAlias) containers.push({ container: declarator, reactAlias });
   }
 
   for (const assignment of rootNode.findAll({ rule: { kind: "assignment_expression" } })) {
-    if (isModuleExportsMember(assignment.field("left")) && isReactCreateClassCall(assignment.field("right"))) {
-      containers.push(assignment);
-    }
+    if (!isModuleExportsMember(assignment.field("left"))) continue;
+    const reactAlias = reactCreateClassAlias(assignment.field("right"), reactAliases);
+    if (reactAlias) containers.push({ container: assignment, reactAlias });
   }
 
   return containers;
@@ -127,14 +148,15 @@ const transform: Transform<TSX> = async (root, options) => {
     return null;
   }
 
+  const reactAliases = resolveReactAliases(rootNode);
   const metric = useMetricAtom("find-dom-node-replacements");
   const edits: Edit[] = [];
   let replacements = 0;
 
-  for (const container of createClassContainers(rootNode)) {
+  for (const { container, reactAlias } of createClassContainers(rootNode, reactAliases)) {
     for (const call of container.findAll({ rule: { kind: "call_expression" } })) {
       if (isGetDOMNodeCall(call, (node) => node?.kind() === "this")) {
-        edits.push(call.replace("React.findDOMNode(this)"));
+        edits.push(call.replace(`${reactAlias}.findDOMNode(this)`));
         replacements++;
         continue;
       }
@@ -142,7 +164,7 @@ const transform: Transform<TSX> = async (root, options) => {
       if (isGetDOMNodeCall(call, isThisRefsChain)) {
         const target = call.field("function")?.field("object");
         if (!target) continue;
-        edits.push(call.replace(`React.findDOMNode(${target.text()})`));
+        edits.push(call.replace(`${reactAlias}.findDOMNode(${target.text()})`));
         replacements++;
       }
     }
@@ -160,7 +182,7 @@ const transform: Transform<TSX> = async (root, options) => {
           continue;
         }
 
-        edits.push(call.replace(`React.findDOMNode(${name.text()})`));
+        edits.push(call.replace(`${reactAlias}.findDOMNode(${name.text()})`));
         replacements++;
       }
     }

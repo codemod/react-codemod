@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { addImport, getImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -26,13 +27,6 @@ const FRAGMENT_INSTANCE_METHODS = new Set([
   "scrollIntoView",
 ]);
 
-type ReactImports = {
-  namespaces: Set<string>;
-  fragmentLocalName: string | null;
-  firstNamedImport: SgNode<TSX> | null;
-  lastImport: SgNode<TSX> | null;
-};
-
 type Wrapper = {
   element: SgNode<TSX>;
   opening: SgNode<TSX>;
@@ -44,48 +38,6 @@ type Wrapper = {
 function namedChildren(node: SgNode<TSX> | null): SgNode<TSX>[] {
   if (!node) return [];
   return node.children().filter((child) => child.isNamed() && child.kind() !== "comment");
-}
-
-function sourceText(node: SgNode<TSX>): string | null {
-  const fragment = node.find({ rule: { kind: "string_fragment" } });
-  if (fragment) return fragment.text();
-  const text = node.text();
-  return text.length >= 2 ? text.slice(1, -1) : null;
-}
-
-function importSource(node: SgNode<TSX>): string | null {
-  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
-  return source ? sourceText(source) : null;
-}
-
-function isTypeOnlyImport(node: SgNode<TSX>): boolean {
-  return node.children().some((child) => !child.isNamed() && child.text() === "type");
-}
-
-function collectReactImports(rootNode: SgNode<TSX, "program">): ReactImports {
-  const result: ReactImports = { namespaces: new Set(), fragmentLocalName: null, firstNamedImport: null, lastImport: null };
-
-  for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (imp.parent()?.kind() !== "program") continue;
-    result.lastImport = imp;
-    if (importSource(imp) !== REACT_MODULE || isTypeOnlyImport(imp)) continue;
-
-    const importClause = imp.find({ rule: { kind: "import_clause" } });
-    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) result.namespaces.add(defaultIdentifier.text());
-    const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
-    const namespaceName = namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
-    if (namespaceName) result.namespaces.add(namespaceName.text());
-
-    if (imp.find({ rule: { kind: "named_imports" } }) && !result.firstNamedImport) result.firstNamedImport = imp;
-    for (const specifier of imp.findAll({ rule: { kind: "import_specifier" } })) {
-      if (specifier.field("name")?.text() === "Fragment") {
-        result.fragmentLocalName = specifier.field("alias")?.text() ?? "Fragment";
-      }
-    }
-  }
-
-  return result;
 }
 
 function attributeName(attr: SgNode<TSX>): string | null {
@@ -164,36 +116,33 @@ function refUsagesAreFragmentSafe(rootNode: SgNode<TSX, "program">, wrapper: Wra
   return true;
 }
 
-function fragmentImportEdit(rootNode: SgNode<TSX, "program">, imports: ReactImports): Edit | null {
-  if (imports.firstNamedImport) {
-    const namedImports = imports.firstNamedImport.find({ rule: { kind: "named_imports" } });
-    if (namedImports) {
-      const text = namedImports.text();
-      let insertPos = namedImports.range().end.index - 1;
-      let offset = text.length - 1;
-      while (offset > 0 && /\s/.test(text[offset - 1] ?? "")) {
-        offset--;
-        insertPos--;
-      }
-      const inner = text.slice(1, -1).trim();
-      return { startPos: insertPos, endPos: insertPos, insertedText: inner.length > 0 ? ", Fragment" : " Fragment " };
+function isLeadingDirective(node: SgNode<TSX> | undefined): boolean {
+  if (!node || node.kind() !== "expression_statement") return false;
+  return namedChildren(node)[0]?.kind() === "string";
+}
+
+function fragmentImportEdit(rootNode: SgNode<TSX, "program">): Edit | null {
+  const edit = addImport(rootNode, {
+    type: "named",
+    specifiers: [{ name: "Fragment" }],
+    from: REACT_MODULE,
+  });
+  if (!edit) return null;
+
+  // addImport inserts at file start when there are no imports; keep "use client" first.
+  if (edit.startPos === 0) {
+    const first = namedChildren(rootNode)[0];
+    if (isLeadingDirective(first)) {
+      const insertPos = first!.range().end.index;
+      return {
+        startPos: insertPos,
+        endPos: insertPos,
+        insertedText: `\n\n${edit.insertedText.replace(/^\n+/, "").replace(/\n$/, "")}`,
+      };
     }
   }
 
-  const statement = 'import { Fragment } from "react";';
-  if (imports.lastImport) {
-    const insertPos = imports.lastImport.range().end.index;
-    return { startPos: insertPos, endPos: insertPos, insertedText: `\n${statement}` };
-  }
-
-  // Keep a leading directive such as "use client" first.
-  const first = namedChildren(rootNode)[0];
-  if (first && first.kind() === "expression_statement" && namedChildren(first)[0]?.kind() === "string") {
-    const insertPos = first.range().end.index;
-    return { startPos: insertPos, endPos: insertPos, insertedText: `\n\n${statement}` };
-  }
-
-  return { startPos: 0, endPos: 0, insertedText: `${statement}\n\n` };
+  return edit;
 }
 
 const transform: Transform<TSX> = async (root) => {
@@ -208,22 +157,34 @@ const transform: Transform<TSX> = async (root) => {
   }
   if (wrappers.length === 0) return null;
 
-  const imports = collectReactImports(rootNode);
+  const fragmentImport = getImport(rootNode, {
+    type: "named",
+    name: "Fragment",
+    from: REACT_MODULE,
+  });
+  const reactBinding = getImport(rootNode, { type: "default", from: REACT_MODULE });
+
   let fragmentName: string;
-  if (imports.fragmentLocalName) {
-    fragmentName = imports.fragmentLocalName;
+  if (fragmentImport && !fragmentImport.isNamespace) {
+    fragmentName = fragmentImport.alias;
+  } else if (reactBinding) {
+    fragmentName = `${reactBinding.alias}.Fragment`;
   } else {
-    const namespace = [...imports.namespaces][0];
-    if (namespace) {
-      fragmentName = `${namespace}.Fragment`;
-    } else {
-      if (rootNode.find({ rule: { any: [{ kind: "identifier", regex: "^Fragment$" }, { kind: "type_identifier", regex: "^Fragment$" }] } })) {
-        return null;
-      }
-      fragmentName = "Fragment";
-      const importEdit = fragmentImportEdit(rootNode, imports);
-      if (importEdit) edits.push(importEdit);
+    if (
+      rootNode.find({
+        rule: {
+          any: [
+            { kind: "identifier", regex: "^Fragment$" },
+            { kind: "type_identifier", regex: "^Fragment$" },
+          ],
+        },
+      })
+    ) {
+      return null;
     }
+    fragmentName = "Fragment";
+    const importEdit = fragmentImportEdit(rootNode);
+    if (importEdit) edits.push(importEdit);
   }
 
   for (const wrapper of wrappers) {

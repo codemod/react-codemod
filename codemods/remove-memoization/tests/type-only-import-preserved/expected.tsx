@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import { createContext, useState } from 'react'
+import {
+  createContext,
+  useState,
+} from 'react'
 
 const Context = createContext({ open: false })
 

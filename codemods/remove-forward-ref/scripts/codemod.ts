@@ -275,7 +275,9 @@ const transform: Transform<TSX> = async (root) => {
     return null;
   }
 
-  if (forwardRefImport) {
+  // getImport falls back to namespace imports for missing named specs; only
+  // remove a real named forwardRef binding.
+  if (forwardRefImport && !forwardRefImport.isNamespace) {
     const removeEdit = removeImport(rootNode, {
       type: "named",
       specifiers: ["forwardRef"],

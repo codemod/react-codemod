@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getImport, removeImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -8,10 +9,6 @@ function metricFile(filename: string): string {
 }
 
 type Specifier = { name: string; alias?: string; isType: boolean };
-
-function isWhitespace(char: string | undefined): boolean {
-  return char === " " || char === "\t" || char === "\n" || char === "\r";
-}
 
 function sourceText(node: SgNode<TSX>): string | null {
   const fragment = node.find({ rule: { kind: "string_fragment" } });
@@ -139,22 +136,37 @@ function removeReactImportEdits(imports: SgNode<TSX>[], source: string): Edit[] 
   });
 }
 
+function reactModuleFromImport(importNode: SgNode<TSX>): "react" | "React" {
+  return importSource(importNode) === "React" ? "React" : "react";
+}
+
 const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
   const source = rootNode.text();
   const metric = useMetricAtom("react-import-updates");
   const edits: Edit[] = [];
 
+  // Discover React default/namespace bindings via utils (namespace is returned as
+  // the default-query fallback when no default binding exists).
+  const reactBinding =
+    getImport(rootNode, { type: "default", from: "react" }) ??
+    getImport(rootNode, { type: "default", from: "React" });
+
   const reactImports = rootNode.findAll({ rule: { kind: "import_statement" } }).filter(isReactImport);
   const valueReactImports = reactImports.filter((imp) =>
     !imp.text().startsWith("import type") && getReactSpecifier(imp) !== null
-
   );
   if (valueReactImports.length === 0) return null;
+
+  // This codemod only rewrites the canonical `React` binding.
+  if (reactBinding && reactBinding.alias !== "React") {
+    return null;
+  }
 
   const primaryReactImport = valueReactImports[0]!;
   const reactSpecifierKind = getReactSpecifier(primaryReactImport)!;
   const quote = quoteFor(primaryReactImport);
+  const reactModule = reactModuleFromImport(primaryReactImport);
   const allNamedFromReactImports = reactImports.flatMap(namedSpecifiers);
   const allExistingNamed = valueReactImports.flatMap(namedSpecifiers);
   const reactIdentifiers = rootNode.findAll({ rule: { kind: "identifier", regex: "^React$" } })
@@ -211,6 +223,43 @@ const transform: Transform<TSX> = async (root, options) => {
   const splitExisting = splitSpecs(allExistingNamed);
   regularSpecs.push(...splitExisting.regular);
   typeSpecs.push(...splitExisting.type);
+
+  // Unused pure default React import — removeImport preserves quote/semicolon style
+  // of surrounding code by deleting the statement rather than rebuilding it.
+  if (
+    !isReactUsed &&
+    !shouldDestructure &&
+    allExistingNamed.length === 0 &&
+    valueReactImports.length === 1 &&
+    reactSpecifierKind === "default"
+  ) {
+    const removeEdit = removeImport(rootNode, {
+      type: "default",
+      from: reactModule,
+    });
+    if (removeEdit) {
+      let edit = removeEdit;
+      // Match prior top-of-file cleanup: drop one following blank line.
+      if (edit.insertedText === "" && edit.startPos === 0) {
+        let cursor = edit.endPos;
+        while (cursor < source.length && (source[cursor] === " " || source[cursor] === "\t")) {
+          cursor++;
+        }
+        if (source.slice(cursor, cursor + 2) === "\r\n") {
+          edit = { ...edit, endPos: cursor + 2 };
+        } else if (source[cursor] === "\n" || source[cursor] === "\r") {
+          edit = { ...edit, endPos: cursor + 1 };
+        }
+      }
+      edits.push(edit);
+      metric.increment({
+        action: "remove-react-import",
+        file: metricFile(root.filename()),
+        previous: reactSpecifierKind,
+      });
+      return rootNode.commitEdits(edits);
+    }
+  }
 
   let replacementImports = "";
   if (shouldDestructure) {

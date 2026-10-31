@@ -1,16 +1,24 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports, getImport, removeImport } from "@jssg/utils/javascript/imports";
+
+type RemovableNamed = {
+  exportName: string;
+  alias: string;
+  from: string;
+};
 
 type ReactImportAliases = {
   component: Set<string>;
   pureComponent: Set<string>;
-  removableNamed: Set<string>;
+  removableNamed: RemovableNamed[];
 };
 
 type ReactSuperclassKind = "Component" | "PureComponent";
 
-const REACT_SOURCES = new Set(["react", "React", "react/addons", "react-native"]);
+const REACT_SOURCES = ["react", "React", "react/addons", "react-native"] as const;
 
 function truthyParam(value: unknown): boolean {
   return value === true || value === "true";
@@ -26,55 +34,35 @@ function namedChildren(node: SgNode<TSX> | null): SgNode<TSX>[] {
   return node.children().filter((child) => child.isNamed() && child.kind() !== "comment");
 }
 
-function sourceText(node: SgNode<TSX>): string | null {
-  const fragment = node.find({ rule: { kind: "string_fragment" } });
-  if (fragment) return fragment.text();
-  const text = node.text();
-  return text.length >= 2 ? text.slice(1, -1) : null;
-}
-
-function importSource(importStmt: SgNode<TSX>): SgNode<TSX> | null {
-  return importStmt.field("source") ?? importStmt.find({ rule: { kind: "string" } });
-}
-
-function isReactSource(importStmt: SgNode<TSX>): boolean {
-  const source = importSource(importStmt);
-  const value = source ? sourceText(source) : null;
-  return value !== null && REACT_SOURCES.has(value);
-}
-
-function reactImportAliases(rootNode: SgNode<TSX>): ReactImportAliases {
+function reactImportAliases(rootNode: SgNode<TSX, "program">): ReactImportAliases {
   const component = new Set<string>();
   const pureComponent = new Set<string>();
-  const removableNamed = new Set<string>();
+  const removableNamed: RemovableNamed[] = [];
 
-  for (const importStmt of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (!isReactSource(importStmt)) continue;
+  for (const from of REACT_SOURCES) {
+    for (const exportName of ["Component", "PureComponent"] as const) {
+      for (const imp of getAllImports(rootNode, { type: "named", name: exportName, from })) {
+        if (imp.isNamespace) continue;
+        if (exportName === "Component") component.add(imp.alias);
+        else pureComponent.add(imp.alias);
 
-    for (const specifier of importStmt.findAll({ rule: { kind: "import_specifier" } })) {
-      const imported = specifier.field("name")?.text();
-      const aliasNode = specifier.field("alias");
-      const alias = aliasNode?.text() ?? imported;
-      if (!imported || !alias) continue;
-
-      if (imported === "Component") {
-        component.add(alias);
-      } else if (imported === "PureComponent") {
-        pureComponent.add(alias);
-      } else {
-        continue;
+        // Legacy removes an import specifier by searching for its `imported` name
+        // in the rest of the file. For `{ Component as C }`, imported=Component but
+        // the class extends `C`; the search finds no `Component` identifier and the
+        // specifier gets kept (legacy quirk). Mirror that: only flag as removable
+        // when the local name equals the imported name.
+        if (imp.alias === exportName) {
+          removableNamed.push({ exportName, alias: imp.alias, from });
+        }
       }
-
-      // Legacy removes an import specifier by searching for its `imported` name
-      // in the rest of the file. For `{ Component as C }`, imported=Component but
-      // the class extends `C`; the search finds no `Component` identifier and the
-      // specifier gets kept (legacy quirk). Mirror that: only flag as removable
-      // when the local name equals the imported name.
-      if (!aliasNode) removableNamed.add(alias);
     }
   }
 
   return { component, pureComponent, removableNamed };
+}
+
+function parseProgram(source: string): SgNode<TSX, "program"> {
+  return parse<TSX>("tsx", source).root();
 }
 
 function reactSuperclassKind(
@@ -429,58 +417,6 @@ function remainingNamedImportUse(
     });
 }
 
-function buildImportSpecifierEdits(
-  importStmt: SgNode<TSX>,
-  aliasesToDrop: Set<string>,
-  source: string,
-): Edit[] {
-  const named = importStmt.find({ rule: { kind: "named_imports" } });
-  if (!named) return [];
-
-  const specifiers = named.findAll({ rule: { kind: "import_specifier" } });
-  const toKeep = specifiers.filter((s) => {
-    const local = s.field("alias")?.text() ?? s.field("name")?.text() ?? "";
-    return !aliasesToDrop.has(local);
-  });
-
-  if (toKeep.length === specifiers.length) return [];
-
-  const clause = importStmt.find({ rule: { kind: "import_clause" } });
-  const defaultImport = clause
-    ? namedChildren(clause).find((c) => c.kind() === "identifier")
-    : null;
-
-  if (toKeep.length === 0) {
-    if (defaultImport) {
-      return [{
-        startPos: clause!.range().start.index,
-        endPos: clause!.range().end.index,
-        insertedText: defaultImport.text(),
-      }];
-    }
-    // Legacy uses ImportSpecifier.remove() which drops only the specifier and
-    // leaves `import 'source';` as a side-effect import. Match that by
-    // replacing the import_clause (plus the trailing `from`) with nothing.
-    const sourceNode = importSource(importStmt);
-    if (!clause || !sourceNode) {
-      const range = lineDeletionRange(importStmt, source);
-      return [{ startPos: range.start, endPos: range.end, insertedText: "" }];
-    }
-    return [{
-      startPos: clause.range().start.index,
-      endPos: sourceNode.range().start.index,
-      insertedText: "",
-    }];
-  }
-
-  const newSpecifiers = toKeep.map((s) => s.text()).join(", ");
-  return [{
-    startPos: named.range().start.index,
-    endPos: named.range().end.index,
-    insertedText: `{ ${newSpecifiers} }`,
-  }];
-}
-
 const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
   const source = rootNode.text();
@@ -562,22 +498,40 @@ const transform: Transform<TSX> = async (root, options) => {
 
   if (edits.length === 0) return null;
 
-  const aliasesToDrop = new Set<string>();
-  for (const alias of aliases.removableNamed) {
-    if (!remainingNamedImportUse(rootNode, alias, transformedClassIds)) {
-      aliasesToDrop.add(alias);
+  const toDropByFrom = new Map<string, string[]>();
+  for (const entry of aliases.removableNamed) {
+    if (!remainingNamedImportUse(rootNode, entry.alias, transformedClassIds)) {
+      const list = toDropByFrom.get(entry.from) ?? [];
+      list.push(entry.exportName);
+      toDropByFrom.set(entry.from, list);
     }
   }
 
-  if (aliasesToDrop.size > 0) {
-    for (const importStmt of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-      if (!isReactSource(importStmt)) continue;
-      edits.push(...buildImportSpecifierEdits(importStmt, aliasesToDrop, source));
+  let next = rootNode.commitEdits(edits);
+  if (toDropByFrom.size > 0) {
+    let program = parseProgram(next);
+    for (const [from, specifiers] of toDropByFrom) {
+      // removeImport drops one remaining named specifier per call when siblings stay.
+      while (specifiers.length > 0) {
+        const stillPresent = specifiers.filter((name) => {
+          const imp = getImport(program, { type: "named", name, from });
+          return !!imp && !imp.isNamespace && imp.alias === name;
+        });
+        if (stillPresent.length === 0) break;
+        const removeEdit = removeImport(program, {
+          type: "named",
+          specifiers: stillPresent,
+          from,
+        });
+        if (!removeEdit) break;
+        next = program.commitEdits([removeEdit]);
+        program = parseProgram(next);
+      }
     }
   }
 
   metric.increment({ file: metricFile(root.filename()) }, transformedClassIds.size);
-  return rootNode.commitEdits(edits);
+  return next;
 };
 
 export default transform;

@@ -1,6 +1,6 @@
 import React, { Suspense, use } from "react";
-import { browser } from "react-dom";
 import { readTheme } from "./theme";
+import { browser } from "react-dom";
 
 export default function ThemeBadge(props) {
   return (

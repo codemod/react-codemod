@@ -21,11 +21,7 @@ function runFixtureTest(input, params = {}) {
   }
 
   try {
-    return spawnSync(
-      "pnpm",
-      [
-        "dlx",
-        "codemod@latest",
+    return spawnSync("codemod", [
         "jssg",
         "test",
         "-l",

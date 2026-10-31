@@ -1,6 +1,6 @@
 import { type FC, Suspense, use } from 'react';
-import { browser } from 'react-dom';
 import { Skeleton } from './skeleton';
+import { browser } from 'react-dom';
 
 export const Viewport: FC<{ label: string }> = (props) => {
   return (

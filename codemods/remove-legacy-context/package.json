@@ -1,15 +1,19 @@
 {
   "name": "react-19-remove-legacy-context",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Remove legacy childContextTypes/getChildContext usage from React class components",
   "type": "module",
   "scripts": {
-    "test": "pnpm dlx codemod@latest jssg test -l tsx ./scripts/codemod.ts",
+    "test": "codemod jssg test -l tsx ./scripts/codemod.ts",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
     "@codemod.com/jssg-types": "latest",
     "@types/node": "latest",
-    "typescript": "latest"
+    "typescript": "^7.0.2",
+    "codemod": "1.18.6"
+  },
+  "dependencies": {
+    "@jssg/utils": "^0.0.10"
   }
 }
