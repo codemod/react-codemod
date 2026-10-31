@@ -122,24 +122,271 @@ function memoizationCallInfo(
   return MEMOIZATION_IMPORTS.has(importedName) ? { call, importedName } : null;
 }
 
-function firstMemoizationArgument(
-  call: SgNode<TSX>,
+// Parents where an arbitrary expression can stand in for the call without
+// extra parentheses. Anywhere else (`a + useMemo(...)`, `!useMemo(...)`) the
+// factory result is wrapped so operator precedence is preserved.
+const BARE_EXPRESSION_PARENTS = new Set([
+  "variable_declarator",
+  "assignment_expression",
+  "return_statement",
+  "arguments",
+  "array",
+  "pair",
+  "jsx_expression",
+  "parenthesized_expression",
+]);
+
+function hasAnonymousChild(node: SgNode<TSX>, text: string): boolean {
+  return node.children().some((child) => !child.isNamed() && child.text() === text);
+}
+
+function unwrapParentheses(node: SgNode<TSX>): SgNode<TSX> {
+  let current = node;
+  while (current.kind() === "parenthesized_expression") {
+    const inner = namedChildren(current)[0];
+    if (!inner) {
+      return current;
+    }
+    current = inner;
+  }
+  return current;
+}
+
+// The expression returned by a block that is nothing but `return <expr>;`.
+// Any other statement or comment in the block means it is kept as an IIFE.
+function soleReturnExpression(block: SgNode<TSX>): SgNode<TSX> | null {
+  const statements = block.children().filter((child) => child.isNamed());
+  const statement = statements[0];
+  if (statements.length !== 1 || statement?.kind() !== "return_statement") {
+    return null;
+  }
+
+  return namedChildren(statement)[0] ?? null;
+}
+
+function arrowFormalParameters(factory: SgNode<TSX>): SgNode<TSX> | null {
+  const params = factory.field("parameters");
+  if (params?.kind() === "formal_parameters") {
+    return params;
+  }
+
+  return namedChildren(factory).find((child) => child.kind() === "formal_parameters") ?? null;
+}
+
+// Parameterless factories are `() => ...`. Any binding, default, rest, or
+// destructuring parameter keeps its own scope and must stay as an invocation.
+function isParameterlessArrow(factory: SgNode<TSX>): boolean {
+  if (factory.field("parameter")) {
+    return false;
+  }
+
+  const formal = arrowFormalParameters(factory);
+  if (formal) {
+    return namedChildren(formal).length === 0;
+  }
+
+  // `x => x` has no formal_parameters node; the binding is a named child that
+  // is not the body (and not a type annotation / type parameters).
+  const body = factory.field("body");
+  return !namedChildren(factory).some((child) => {
+    if (body && child.id() === body.id()) {
+      return false;
+    }
+    const kind = child.kind();
+    return kind !== "type_parameters" && kind !== "type_annotation" && kind !== "returning_type_annotation";
+  });
+}
+
+function arrowReturnTypeAnnotation(factory: SgNode<TSX>): SgNode<TSX> | null {
+  return (
+    factory.field("return_type") ??
+    namedChildren(factory).find(
+      (child) => child.kind() === "type_annotation" || child.kind() === "returning_type_annotation",
+    ) ??
+    null
+  );
+}
+
+function callTypeArgumentsText(call: SgNode<TSX>): string | null {
+  const typeArgs = call.field("type_arguments");
+  if (!typeArgs) {
+    return null;
+  }
+
+  // type_arguments text is `<Config>` or `<A, B>`; strip the brackets.
+  const text = typeArgs.text();
+  if (text.startsWith("<") && text.endsWith(">")) {
+    return text.slice(1, -1).trim();
+  }
+
+  return text.trim() || null;
+}
+
+function wrapExpressionText(call: SgNode<TSX>, expression: SgNode<TSX>): string {
+  const bareParent = BARE_EXPRESSION_PARENTS.has(call.parent()?.kind() ?? "");
+  const text = expression.text();
+  return bareParent && expression.kind() !== "sequence_expression" ? text : `(${text})`;
+}
+
+function wrapRawExpressionText(call: SgNode<TSX>, text: string, forceParen = false): string {
+  const bareParent = BARE_EXPRESSION_PARENTS.has(call.parent()?.kind() ?? "");
+  return !forceParen && bareParent ? text : `(${text})`;
+}
+
+function invokeFactoryText(call: SgNode<TSX>, factory: SgNode<TSX>): string {
+  if (factory.kind() === "identifier") {
+    return `${factory.text()}()`;
+  }
+
+  // Member references must stay unbound: React calls the factory as a bare
+  // function, so `(obj.compute)()` would incorrectly set `this` to `obj`.
+  if (factory.kind() === "member_expression" || factory.kind() === "subscript_expression") {
+    return `(0, ${factory.text()})()`;
+  }
+
+  return `(${factory.text()})()`;
+}
+
+// Extract the expression a useMemo factory evaluates to, when that is safe.
+// Returns null when the factory must be invoked instead (params, async,
+// return type annotation, non-trivial body, etc.).
+function extractableUseMemoResult(factory: SgNode<TSX>): SgNode<TSX> | null {
+  const unwrapped = unwrapParentheses(factory);
+
+  if (unwrapped.kind() !== "arrow_function" || hasAnonymousChild(unwrapped, "async")) {
+    return null;
+  }
+
+  if (!isParameterlessArrow(unwrapped) || arrowReturnTypeAnnotation(unwrapped)) {
+    return null;
+  }
+
+  const body = unwrapped.field("body");
+  if (!body) {
+    return null;
+  }
+
+  if (body.kind() !== "statement_block") {
+    return unwrapParentheses(body);
+  }
+
+  return soleReturnExpression(body);
+}
+
+function applyTypeAssertion(call: SgNode<TSX>, expressionText: string): string {
+  const typeArgs = callTypeArgumentsText(call);
+  if (!typeArgs) {
+    return expressionText;
+  }
+
+  // `as` binds looser than most operators; parenthesize the asserted value and
+  // wrap again when the call sits in an operator position.
+  const asserted = `(${expressionText}) as ${typeArgs}`;
+  const bareParent = BARE_EXPRESSION_PARENTS.has(call.parent()?.kind() ?? "");
+  return bareParent ? asserted : `(${asserted})`;
+}
+
+// `useMemo(factory, deps)` evaluates to the factory's *result*, so the call is
+// replaced by that result, not by the factory itself. Expression-bodied arrows
+// and blocks that only return an expression become that expression;
+// everything else is invoked in place.
+function memoFactoryResultText(call: SgNode<TSX>, memoFactory: SgNode<TSX>): string {
+  const factory = unwrapParentheses(memoFactory);
+  const extracted = extractableUseMemoResult(factory);
+  if (extracted) {
+    // Preserve useMemo<T> contextual typing when the factory itself has no
+    // return annotation (those keep the annotated IIFE path below).
+    if (callTypeArgumentsText(call)) {
+      return applyTypeAssertion(call, extracted.text());
+    }
+    return wrapExpressionText(call, extracted);
+  }
+
+  // Annotated arrows keep their return type by staying as invocations.
+  // Type arguments on the call are redundant once the annotation remains.
+  if (
+    factory.kind() === "arrow_function" &&
+    !hasAnonymousChild(factory, "async") &&
+    arrowReturnTypeAnnotation(factory) &&
+    isParameterlessArrow(factory)
+  ) {
+    return `(${factory.text()})()`;
+  }
+
+  const invoked = invokeFactoryText(call, factory);
+  return callTypeArgumentsText(call) && !arrowReturnTypeAnnotation(factory)
+    ? applyTypeAssertion(call, invoked)
+    : invoked;
+}
+
+function memoizationResultText(
+  match: MemoizationCall,
   selectedCallIds: Set<number>,
-): SgNode<TSX> | null {
-  const firstArg = callArguments(call)[0] ?? null;
+  namedImports: Map<string, string>,
+  reactObjectNames: Set<string>,
+): string | null {
+  const firstArg = callArguments(match.call)[0] ?? null;
   if (!firstArg) {
     return null;
   }
 
-  if (selectedCallIds.has(firstArg.id())) {
-    return firstMemoizationArgument(firstArg, selectedCallIds);
+  // Nested memoization: convert the inner call first, then apply this layer's
+  // semantics to that result (useMemo invokes it; useCallback/memo keep it).
+  if (selectedCallIds.has(firstArg.id()) && firstArg.kind() === "call_expression") {
+    const inner = memoizationCallInfo(firstArg, namedImports, reactObjectNames);
+    if (!inner) {
+      return null;
+    }
+
+    const innerResult = memoizationResultText(inner, selectedCallIds, namedImports, reactObjectNames);
+    if (innerResult === null) {
+      return null;
+    }
+
+    if (match.importedName !== "useMemo") {
+      return innerResult;
+    }
+
+    // Prefer AST-based unwrapping when the inner result is still an extractable
+    // factory node (common for useCallback/memo wrappers). Otherwise invoke the
+    // inner result text as the outer factory.
+    if (inner.importedName !== "useMemo") {
+      const innerFactory = callArguments(inner.call)[0];
+      if (innerFactory) {
+        return memoFactoryResultText(match.call, innerFactory);
+      }
+    }
+
+    // Inner was useMemo: its result text is the outer factory value. If that
+    // text is itself a parameterless expression-bodied arrow we can unwrap
+    // once more via a lightweight parse of the common `() => expr` shape by
+    // looking at the inner factory's extractable result and treating *that*
+    // as the outer factory.
+    const innerFactory = callArguments(inner.call)[0];
+    if (innerFactory) {
+      const innerExtracted = extractableUseMemoResult(unwrapParentheses(innerFactory));
+      if (innerExtracted) {
+        return memoFactoryResultText(match.call, innerExtracted);
+      }
+    }
+
+    return wrapRawExpressionText(match.call, `(${innerResult})()`, true);
   }
 
-  return firstArg;
+  if (match.importedName === "useMemo") {
+    return memoFactoryResultText(match.call, firstArg);
+  }
+
+  return firstArg.text();
 }
 
-function replacementText(call: SgNode<TSX>, selectedCallIds: Set<number>): string | null {
-  return firstMemoizationArgument(call, selectedCallIds)?.text() ?? null;
+function replacementText(
+  match: MemoizationCall,
+  selectedCallIds: Set<number>,
+  namedImports: Map<string, string>,
+  reactObjectNames: Set<string>,
+): string | null {
+  return memoizationResultText(match, selectedCallIds, namedImports, reactObjectNames);
 }
 
 function keptRanges(call: SgNode<TSX>, selectedCallIds: Set<number>): Range[] {
@@ -261,11 +508,56 @@ function consumeFollowingBlankLine(edit: Edit, programText: string): Edit {
   return edit;
 }
 
+function specifierLocalName(specifier: SgNode<TSX>): string {
+  return specifier.field("alias")?.text() ?? specifier.field("name")?.text() ?? "";
+}
+
+// Removes several named specifiers from one statement that keeps at least one.
+// Specifiers are matched by local binding name (alias or exported name) so two
+// aliases of the same export can be removed independently. `removeImport`
+// takes a separator with each specifier, so removing neighbours
+// (`useCallback, useMemo`) one by one would produce overlapping edits. Each
+// run of removed specifiers is instead cut up to the next kept one, or back
+// to the previous kept one when the run is last, preserving formatting.
+function removeSpecifierEdits(statement: SgNode<TSX>, unusedLocalNames: string[]): Edit[] {
+  const unused = new Set(unusedLocalNames);
+  const specifiers = statement.findAll({ rule: { kind: "import_specifier" } });
+  const removed = specifiers.map((specifier) => unused.has(specifierLocalName(specifier)));
+  const edits: Edit[] = [];
+
+  for (let index = 0; index < specifiers.length; index++) {
+    if (!removed[index] || removed[index - 1]) {
+      continue;
+    }
+
+    let runEnd = index;
+    while (removed[runEnd + 1]) {
+      runEnd++;
+    }
+
+    const next = specifiers[runEnd + 1];
+    const previous = specifiers[index - 1];
+    if (next) {
+      edits.push({ startPos: nodeRange(specifiers[index]!).start, endPos: nodeRange(next).start, insertedText: "" });
+    } else if (previous) {
+      edits.push({ startPos: nodeRange(previous).end, endPos: nodeRange(specifiers[runEnd]!).end, insertedText: "" });
+    }
+  }
+
+  return edits;
+}
+
 function cleanupUnusedImports(
   rootNode: SgNode<TSX, "program">,
   usedImportLocals: Set<string>,
+  referencedImportLocals: Set<string>,
   edits: Edit[],
 ): void {
+  // A default or namespace import is only removed when this codemod is what
+  // made it unused; one that was already unused is left in place.
+  const keepObjectImport = (alias: string) =>
+    usedImportLocals.has(alias) || !referencedImportLocals.has(alias);
+
   const programText = rootNode.text();
   const handledStatements = new Set<number>();
 
@@ -280,7 +572,10 @@ function cleanupUnusedImports(
         continue;
       }
 
-      const unusedInStatement: string[] = [];
+      // Track unused *local* bindings, not exported names, so `useMemo as a`
+      // can be removed while `useMemo as b` remains.
+      const unusedLocalsInStatement: string[] = [];
+      const unusedExportNames = new Set<string>();
       for (const memoName of MEMOIZATION_NAMES) {
         for (const sibling of getAllImports(rootNode, {
           type: "named",
@@ -291,22 +586,24 @@ function cleanupUnusedImports(
             continue;
           }
           if (importStatementForBinding(sibling.node)?.id() === statement.id()) {
-            unusedInStatement.push(memoName);
+            unusedLocalsInStatement.push(sibling.alias);
+            unusedExportNames.add(memoName);
           }
         }
       }
 
-      const removingAllNamed = unusedInStatement.length >= namedSpecifierCount(statement);
+      const removingAllNamed = unusedLocalsInStatement.length >= namedSpecifierCount(statement);
       const binding = defaultOrNamespaceLocal(statement);
-      const keepBinding = binding ? usedImportLocals.has(binding.alias) : false;
+      const keepBinding = binding ? keepObjectImport(binding.alias) : false;
 
-      if (removingAllNamed && !keepBinding) {
-        // Drop the whole statement in one edit (avoids overlapping default+named removals).
+      if (removingAllNamed) {
+        // removeImport drops the whole statement, or only the `, { ... }` clause
+        // when a default/namespace binding must stay.
         const removeEdit = removeImport(rootNode, {
           type: "named",
-          specifiers: unusedInStatement,
+          specifiers: [...unusedExportNames],
           from: "react",
-        }) ?? (binding
+        }) ?? (!keepBinding && binding
           ? removeImport(rootNode, {
               type: binding.isNamespace ? "namespace" : "default",
               from: "react",
@@ -320,23 +617,19 @@ function cleanupUnusedImports(
         continue;
       }
 
-      const removeEdit = removeImport(rootNode, {
-        type: "named",
-        specifiers: removingAllNamed ? unusedInStatement : [name],
-        from: "react",
-      });
-
-      if (removeEdit) {
-        edits.push(consumeFollowingBlankLine(removeEdit, programText));
-        if (removingAllNamed) {
-          handledStatements.add(statement.id());
-        }
+      // Partial removal: match by local binding so duplicate export aliases
+      // (`useMemo as a` vs `useMemo as b`) can be removed independently.
+      // removeImport matches the first export name and would delete the wrong one.
+      if (unusedLocalsInStatement.length > 0) {
+        edits.push(...removeSpecifierEdits(statement, unusedLocalsInStatement));
+        handledStatements.add(statement.id());
+        continue;
       }
     }
   }
 
   for (const imp of getAllImports(rootNode, { type: "default", from: "react" })) {
-    if (usedImportLocals.has(imp.alias)) {
+    if (keepObjectImport(imp.alias)) {
       continue;
     }
 
@@ -398,7 +691,7 @@ const transform: Transform<TSX> = async (root) => {
   const metricCounts = new Map<string, number>();
 
   for (const match of selectedMatches) {
-    const replacement = replacementText(match.call, selectedCallIds);
+    const replacement = replacementText(match, selectedCallIds, namedImports, reactObjectNames);
     if (!replacement) {
       continue;
     }
@@ -423,7 +716,9 @@ const transform: Transform<TSX> = async (root) => {
     selectedCallIds,
   );
 
-  cleanupUnusedImports(rootNode, usedImportLocals, edits);
+  const referencedImportLocals = collectUsedImportLocals(rootNode, importedLocalNames, [], selectedCallIds);
+
+  cleanupUnusedImports(rootNode, usedImportLocals, referencedImportLocals, edits);
 
   for (const [pattern, count] of metricCounts) {
     metric.increment({

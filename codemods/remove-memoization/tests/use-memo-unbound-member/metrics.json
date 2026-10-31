@@ -1,0 +1,11 @@
+{
+  "remove-memoization-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/use-memo-unbound-member/input.tsx",
+        "pattern": "useMemo"
+      },
+      "count": 3
+    }
+  ]
+}
