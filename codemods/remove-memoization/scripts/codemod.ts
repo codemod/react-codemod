@@ -254,7 +254,7 @@ function unwrapParentheses(node: SgNode<TSX>): SgNode<TSX> {
   let current = node;
   while (current.kind() === "parenthesized_expression") {
     const inner = namedChildren(current)[0];
-    if (!inner || inner.kind() === "sequence_expression") {
+    if (!inner) {
       return current;
     }
     current = inner;
@@ -262,17 +262,39 @@ function unwrapParentheses(node: SgNode<TSX>): SgNode<TSX> {
   return current;
 }
 
+// The expression returned by a block that is nothing but `return <expr>;`.
+// Any other statement or comment in the block means it is kept as an IIFE.
+function soleReturnExpression(block: SgNode<TSX>): SgNode<TSX> | null {
+  const statements = block.children().filter((child) => child.isNamed());
+  const statement = statements[0];
+  if (statements.length !== 1 || statement?.kind() !== "return_statement") {
+    return null;
+  }
+
+  return namedChildren(statement)[0] ?? null;
+}
+
 // `useMemo(factory, deps)` evaluates to the factory's *result*, so the call is
 // replaced by that result, not by the factory itself. Expression-bodied arrows
-// become their body; everything else is invoked in place.
-function memoFactoryResultText(call: SgNode<TSX>, factory: SgNode<TSX>): string {
+// and blocks that only return an expression become that expression;
+// everything else is invoked in place.
+function memoFactoryResultText(call: SgNode<TSX>, memoFactory: SgNode<TSX>): string {
   const bareParent = BARE_EXPRESSION_PARENTS.has(call.parent()?.kind() ?? "");
-  const wrap = (text: string) => (bareParent ? text : `(${text})`);
+  const wrap = (expression: SgNode<TSX>) => {
+    const text = expression.text();
+    return bareParent && expression.kind() !== "sequence_expression" ? text : `(${text})`;
+  };
+  const factory = unwrapParentheses(memoFactory);
 
   if (factory.kind() === "arrow_function" && !hasAnonymousChild(factory, "async")) {
     const body = factory.field("body");
     if (body && body.kind() !== "statement_block") {
-      return wrap(unwrapParentheses(body).text());
+      return wrap(unwrapParentheses(body));
+    }
+
+    const returned = body ? soleReturnExpression(body) : null;
+    if (returned) {
+      return wrap(returned);
     }
   }
 
@@ -366,6 +388,7 @@ function collectUsedImportLocals(
 function importStatementReplacement(
   reactImport: ReactImportInfo,
   usedImportLocals: Set<string>,
+  referencedImportLocals: Set<string>,
   sourceCode: string,
 ): Edit | null {
   // Only the memoization imports are candidates for removal; an unrelated
@@ -373,8 +396,12 @@ function importStatementReplacement(
   const keptNamedSpecifiers = reactImport.namedSpecifiers.filter((specifier) =>
     usedImportLocals.has(specifier.localName) || !MEMOIZATION_IMPORTS.has(specifier.importedName)
   );
-  const keepDefault = reactImport.defaultSpecifier ? usedImportLocals.has(reactImport.defaultSpecifier.localName) : false;
-  const keepNamespace = reactImport.namespaceSpecifier ? usedImportLocals.has(reactImport.namespaceSpecifier.localName) : false;
+  // A default or namespace import is only removed when this codemod is what
+  // made it unused; one that was already unused is left in place.
+  const keepObjectImport = (specifier: ImportSpecifierInfo | null) =>
+    specifier ? usedImportLocals.has(specifier.localName) || !referencedImportLocals.has(specifier.localName) : false;
+  const keepDefault = keepObjectImport(reactImport.defaultSpecifier);
+  const keepNamespace = keepObjectImport(reactImport.namespaceSpecifier);
 
   // An import that loses no specifier keeps its original text, so formatting,
   // `import type` and semicolon style survive untouched.
@@ -531,9 +558,10 @@ const transform: Transform<TSX> = async (root) => {
   }
 
   const usedImportLocals = collectUsedImportLocals(rootNode, importedLocalNames, selectedCalls, selectedCallIds);
+  const referencedImportLocals = collectUsedImportLocals(rootNode, importedLocalNames, [], selectedCallIds);
   const sourceCode = rootNode.text();
   for (const reactImport of reactImports) {
-    const edit = importStatementReplacement(reactImport, usedImportLocals, sourceCode);
+    const edit = importStatementReplacement(reactImport, usedImportLocals, referencedImportLocals, sourceCode);
     if (edit) {
       edits.push(edit);
     }
