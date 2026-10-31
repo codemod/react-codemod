@@ -1,0 +1,10 @@
+{
+  "use-browser-transformations": [
+    {
+      "cardinality": {
+        "file": "tests/named-hooks-with-namespace-import/input.tsx"
+      },
+      "count": 1
+    }
+  ]
+}

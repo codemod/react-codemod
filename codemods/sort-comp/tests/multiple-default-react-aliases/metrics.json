@@ -1,0 +1,11 @@
+{
+  "sort-comp-reorders": [
+    {
+      "cardinality": {
+        "file": "tests/multiple-default-react-aliases/input.tsx",
+        "kind": "class"
+      },
+      "count": 1
+    }
+  ]
+}

@@ -1,2 +1,2 @@
-import { act } from "react";
+import { act } from 'react';
 act();

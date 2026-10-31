@@ -1,0 +1,11 @@
+{
+  "replace-act-import-migrations": [
+    {
+      "cardinality": {
+        "file": "tests/single-quote-named/input.tsx",
+        "pattern": "named-import"
+      },
+      "count": 1
+    }
+  ]
+}

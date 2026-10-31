@@ -1,7 +1,8 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
+import { getAllImports, updateImport } from "@jssg/utils/javascript/imports";
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -12,59 +13,30 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-type NamedUseContextImport = { specifier: SgNode<TSX>; localName: string };
-
-function sourceText(node: SgNode<TSX>): string | null {
-  const fragment = node.find({ rule: { kind: "string_fragment" } });
-  if (fragment) return fragment.text();
-  const text = node.text();
-  return text.length >= 2 ? text.slice(1, -1) : null;
-}
-
-function importSource(node: SgNode<TSX>): string | null {
-  const source = node.field("source") ?? node.find({ rule: { kind: "string" } });
-  return source ? sourceText(source) : null;
-}
-
 function findReactMemberImportNames(rootNode: SgNode<TSX, "program">): Set<string> {
   const names = new Set<string>();
-  const reactBinding = getImport(rootNode, { type: "default", from: "react" });
-  if (reactBinding) {
-    names.add(reactBinding.alias);
+  for (const binding of getAllImports(rootNode, { type: "default", from: "react" })) {
+    names.add(binding.alias);
   }
-
-  for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(imp) !== "react") continue;
-
-    const importClause = imp.find({ rule: { kind: "import_clause" } });
-    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) names.add(defaultIdentifier.text());
-
-    const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
-    const namespaceName =
-      namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
-    if (namespaceName) names.add(namespaceName.text());
-  }
-
   return names;
 }
 
-function findNamedUseContextImports(rootNode: SgNode<TSX, "program">): NamedUseContextImport[] {
-  const imports: NamedUseContextImport[] = [];
+function applyUseContextImportRenames(source: string): string {
+  let current = source;
+  let program = parse<TSX>("tsx", current).root();
 
-  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(importNode) !== "react") continue;
-
-    for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
-      if (specifier.field("name")?.text() !== "useContext") continue;
-      imports.push({
-        specifier,
-        localName: specifier.field("alias")?.text() ?? "useContext",
-      });
-    }
+  while (true) {
+    const edit = updateImport(program, {
+      type: "named",
+      from: "react",
+      specifiers: [{ name: "useContext", to: "use" }],
+    });
+    if (!edit) break;
+    current = program.commitEdits([edit]);
+    program = parse<TSX>("tsx", current).root();
   }
 
-  return imports;
+  return current;
 }
 
 const transform: Transform<TSX> = async (root) => {
@@ -74,7 +46,11 @@ const transform: Transform<TSX> = async (root) => {
   const transformMetric = useMetricAtom("use-context-transformations");
 
   const reactMemberImportNames = findReactMemberImportNames(rootNode);
-  const namedUseContextImports = findNamedUseContextImports(rootNode);
+  const namedUseContextImports = getAllImports(rootNode, {
+    type: "named",
+    name: "useContext",
+    from: "react",
+  });
 
   const shouldSkipLegacyIdentifierRename = (node: SgNode<TSX>): boolean => {
     const parent = node.parent();
@@ -136,7 +112,7 @@ const transform: Transform<TSX> = async (root) => {
   }
 
   const activeLocalNames = new Map<string, number>();
-  for (const localName of new Set(namedUseContextImports.map((entry) => entry.localName))) {
+  for (const localName of new Set(namedUseContextImports.map((entry) => entry.alias))) {
     const useContextCalls = rootNode.findAll({
       rule: {
         kind: "call_expression",
@@ -153,7 +129,12 @@ const transform: Transform<TSX> = async (root) => {
     }
   }
 
-  if (activeLocalNames.has("useContext")) {
+  const needsImportRename = activeLocalNames.size > 0;
+  const hasUnaliasedImport = namedUseContextImports.some((entry) => entry.alias === "useContext");
+
+  // updateImport renames every useContext specifier, so the unaliased binding's
+  // references must follow whenever any alias triggers the import rename.
+  if (needsImportRename && hasUnaliasedImport) {
     const renameTargets = rootNode.findAll({
       rule: {
         any: [
@@ -167,12 +148,6 @@ const transform: Transform<TSX> = async (root) => {
       if (shouldSkipLegacyIdentifierRename(node)) continue;
       edits.push(node.replace("use"));
     }
-  }
-
-  for (const entry of namedUseContextImports) {
-    if (!activeLocalNames.has(entry.localName)) continue;
-    const replacementText = entry.localName === "useContext" ? "use" : `use as ${entry.localName}`;
-    edits.push(entry.specifier.replace(replacementText));
   }
 
   const unaliasedCallCount = activeLocalNames.get("useContext") ?? 0;
@@ -196,11 +171,16 @@ const transform: Transform<TSX> = async (root) => {
     }, aliasedCallCount);
   }
 
-  if (edits.length === 0) {
+  if (edits.length === 0 && !needsImportRename) {
     return null;
   }
 
-  return rootNode.commitEdits(edits);
+  let source = edits.length > 0 ? rootNode.commitEdits(edits) : rootNode.text();
+  if (needsImportRename) {
+    source = applyUseContextImportRenames(source);
+  }
+
+  return source === rootNode.text() ? null : source;
 };
 
 export default transform;

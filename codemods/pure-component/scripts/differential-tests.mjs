@@ -36,11 +36,7 @@ function runJssgOutput(input, params = {}) {
   }
 
   try {
-    const result = spawnSync(
-      "pnpm",
-      [
-        "dlx",
-        "codemod@latest",
+    const result = spawnSync("codemod", [
         "jssg",
         "test",
         "-l",

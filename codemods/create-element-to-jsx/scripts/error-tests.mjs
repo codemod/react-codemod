@@ -16,11 +16,7 @@ function runCodemod(input) {
   writeFileSync(filePath, input, "utf8");
 
   try {
-    return spawnSync(
-      "pnpm",
-      [
-        "dlx",
-        "codemod@latest",
+    return spawnSync("codemod", [
         "workflow",
         "run",
         "-w",

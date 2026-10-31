@@ -7,5 +7,6 @@
     "test": "node --test ./scripts/metadata-tests.mjs",
     "check-types": "node --check ./scripts/metadata-tests.mjs"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {}
 }

@@ -1,6 +1,8 @@
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports, getImport, removeImport } from "@jssg/utils/javascript/imports";
 
 type PreserveMode = "none" | "unconverted" | "all";
 type RenderedType =
@@ -875,25 +877,68 @@ function interfaceInsertionEdit(
   return { startPos: start, endPos: start, insertedText: `${rendered}${newline}${newline}` };
 }
 
-function collectPropTypesImports(rootNode: SgNode<TSX, "program">): Array<{ localName: string }> {
-  const imports: Array<{ localName: string }> = [];
+type PropTypesImport =
+  | { kind: "default" | "namespace"; localName: string }
+  | { kind: "named"; localName: string; exportedName: string };
 
+function collectPropTypesImports(rootNode: SgNode<TSX, "program">): PropTypesImport[] {
+  const imports: PropTypesImport[] = [];
+  const seen = new Set<string>();
+
+  for (const defaultImp of getAllImports(rootNode, { type: "default", from: "prop-types" })) {
+    const kind = defaultImp.isNamespace ? "namespace" : "default";
+    const key = `${kind}:${defaultImp.alias}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      imports.push({ kind, localName: defaultImp.alias });
+    }
+  }
+
+  // Discover named bindings from prop-types import statements, then confirm via getImport.
   for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
     if (importSource(importNode) !== "prop-types") {
       continue;
     }
 
-    const importClause = importNode.find({ rule: { kind: "import_clause" } });
-    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) {
-      imports.push({ localName: defaultIdentifier.text() });
-    }
-
     for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
-      const localName = specifier.field("alias")?.text() ?? specifier.field("name")?.text();
-      if (localName) {
-        imports.push({ localName });
-      }
+      const exportedName = specifier.field("name")?.text();
+      if (!exportedName) continue;
+
+      const resolved = getImport(rootNode, {
+        type: "named",
+        name: exportedName,
+        from: "prop-types",
+      });
+      if (!resolved || resolved.isNamespace) continue;
+
+      const key = `named:${exportedName}:${resolved.alias}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      imports.push({
+        kind: "named",
+        localName: resolved.alias,
+        exportedName,
+      });
+    }
+  }
+
+  // CJS / additional aliases: getAllImports for any named exports already discovered.
+  for (const named of imports.filter((entry): entry is Extract<PropTypesImport, { kind: "named" }> =>
+    entry.kind === "named"
+  )) {
+    for (const resolved of getAllImports(rootNode, {
+      type: "named",
+      name: named.exportedName,
+      from: "prop-types",
+    }).filter((imp) => !imp.isNamespace)) {
+      const key = `named:${named.exportedName}:${resolved.alias}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      imports.push({
+        kind: "named",
+        localName: resolved.alias,
+        exportedName: named.exportedName,
+      });
     }
   }
 
@@ -904,26 +949,77 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function cleanupPropTypesImports(source: string, imports: Array<{ localName: string }>): string {
+function parseProgram(source: string): SgNode<TSX, "program"> {
+  return parse<TSX>("tsx", source).root();
+}
+
+function isBindingReferenced(
+  program: SgNode<TSX, "program">,
+  binding: { alias: string; node: SgNode<TSX> },
+): boolean {
+  const bindingStart = binding.node.range().start.index;
+  return program
+    .findAll({
+      rule: {
+        any: [{ kind: "identifier" }, { kind: "type_identifier" }, { kind: "shorthand_property_identifier" }],
+        regex: `^${escapeRegExp(binding.alias)}$`,
+        not: { inside: { kind: "import_statement", stopBy: "end" } },
+      },
+    })
+    .some((node) => node.range().start.index !== bindingStart);
+}
+
+function cleanupPropTypesImports(source: string, imports: PropTypesImport[]): string {
   if (imports.length === 0) {
     return source;
   }
 
-  const sourceWithoutImports = source
-    .split(/\r?\n/)
-    .filter((line) => !/^\s*import .* from ['"]prop-types['"]\s*;?\s*$/.test(line))
-    .join("\n");
+  let nextSource = source;
 
-  const hasRemainingUsage = imports.some(({ localName }) =>
-    new RegExp(`\\b${escapeRegExp(localName)}\\s*\\.`, "m").test(sourceWithoutImports)
-  );
-  if (hasRemainingUsage) {
-    return source;
+  // removeImport only targets the first default/namespace binding, so stop once that one is still referenced.
+  while (true) {
+    const program = parseProgram(nextSource);
+    const defaultImp = getImport(program, { type: "default", from: "prop-types" });
+    if (!defaultImp || isBindingReferenced(program, defaultImp)) break;
+    const removeEdit = removeImport(program, {
+      type: defaultImp.isNamespace ? "namespace" : "default",
+      from: "prop-types",
+    });
+    if (!removeEdit) break;
+    const updated = program.commitEdits([removeEdit]);
+    if (updated === nextSource) break;
+    nextSource = updated;
   }
 
-  return source
-    .replace(/^\s*import .* from ['"]prop-types['"]\s*;?\r?\n?/gm, "")
-    .replace(/^\s*\r?\n/, "");
+  const namedExports = [
+    ...new Set(
+      imports
+        .filter((entry): entry is Extract<PropTypesImport, { kind: "named" }> => entry.kind === "named")
+        .map((entry) => entry.exportedName),
+    ),
+  ];
+
+  for (const exportedName of namedExports) {
+    while (true) {
+      const program = parseProgram(nextSource);
+      const remaining = getAllImports(program, {
+        type: "named",
+        name: exportedName,
+        from: "prop-types",
+      }).filter((imp) => !imp.isNamespace);
+      if (remaining.length === 0 || remaining.some((imp) => isBindingReferenced(program, imp))) break;
+
+      const removeEdit = removeImport(program, {
+        type: "named",
+        specifiers: [exportedName],
+        from: "prop-types",
+      });
+      if (!removeEdit) break;
+      nextSource = program.commitEdits([removeEdit]);
+    }
+  }
+
+  return nextSource.replace(/^\s*\r?\n/, "");
 }
 
 function preserveModeFromOptions(rawValue: unknown): PreserveMode {

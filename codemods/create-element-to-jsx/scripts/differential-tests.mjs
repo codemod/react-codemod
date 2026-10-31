@@ -26,11 +26,7 @@ function runJssg(source) {
     spawnSync("git", ["add", "input.tsx", ".gitignore"], { cwd: dir });
     spawnSync("git", ["commit", "-qm", "init"], { cwd: dir });
 
-    const result = spawnSync(
-      "pnpm",
-      [
-        "dlx",
-        "codemod@latest",
+    const result = spawnSync("codemod", [
         "workflow",
         "run",
         "-w",

@@ -1,7 +1,7 @@
 import Abc from 'abc';
-import PropTypes from 'prop-types';
 import React from 'React';
 import Xzy from 'xyz';
+import PropTypes from 'prop-types';
 
 class ClassComponent extends React.Component {
   static propTypes = {

@@ -1,6 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
+import { getAllImports } from "@jssg/utils/javascript/imports";
 
 type Conversion = {
   code: string;
@@ -33,7 +34,21 @@ type ArgumentLayout = {
   boundaryComments: SgNode<TSX>[][];
 };
 
-const REACT_MODULES = new Set(["React", "react", "react/addons", "react-native"]);
+const REACT_MODULES = ["React", "react", "react/addons", "react-native"] as const;
+const REACT_MODULE_SET = new Set<string>(REACT_MODULES);
+
+/** Resolved per-transform from import/require bindings (supports `import * as R`). */
+let currentReactAliases = new Set<string>(["React"]);
+
+function resolveReactAliases(rootNode: SgNode<TSX, "program">): Set<string> {
+  const aliases = new Set<string>();
+  for (const from of REACT_MODULES) {
+    for (const imp of getAllImports(rootNode, { type: "default", from })) {
+      aliases.add(imp.alias);
+    }
+  }
+  return aliases.size > 0 ? aliases : new Set(["React"]);
+}
 
 function metricFile(filename: string): string {
   const cwd = process.cwd() + "/";
@@ -92,10 +107,6 @@ function stringValue(node: SgNode<TSX>): string {
   return evaluated;
 }
 
-function isReactModuleName(value: string | null): boolean {
-  return value !== null && REACT_MODULES.has(value);
-}
-
 function stringNodeFrom(node: SgNode<TSX>): SgNode<TSX> | null {
   if (node.kind() === "string") {
     return node;
@@ -144,6 +155,10 @@ function hasReact(rootNode: SgNode<TSX>): boolean {
   return false;
 }
 
+function isReactModuleName(value: string | null): boolean {
+  return value !== null && REACT_MODULE_SET.has(value);
+}
+
 function callArguments(call: SgNode<TSX>): SgNode<TSX>[] {
   const args = call.field("arguments");
   if (!args) {
@@ -167,7 +182,7 @@ function isReactCreateElementCall(node: SgNode<TSX>): boolean {
   const property = callee.field("property");
 
   return object?.kind() === "identifier" &&
-    object.text() === "React" &&
+    currentReactAliases.has(object.text()) &&
     property?.kind() === "property_identifier" &&
     property.text() === "createElement";
 }
@@ -489,7 +504,7 @@ function propsToDescriptors(node: SgNode<TSX> | null, source: string): {
     return { attrs: [], trailingElementComments: [], consumedBoundaryComments: [] };
   }
 
-  if (isMemberCall(node, "React", "__spread") || isMemberCall(node, "Object", "assign")) {
+  if (isReactSpreadCall(node) || isMemberCall(node, "Object", "assign")) {
     const callee = node.field("function");
     const calleeObject = callee?.field("object") ?? null;
     const calleeProperty = callee?.field("property") ?? null;
@@ -745,12 +760,19 @@ function isMemberCall(node: SgNode<TSX>, objectName: string, propertyName: strin
     property.text() === propertyName;
 }
 
+function isReactSpreadCall(node: SgNode<TSX>): boolean {
+  for (const alias of currentReactAliases) {
+    if (isMemberCall(node, alias, "__spread")) return true;
+  }
+  return false;
+}
+
 function propsToAttributes(node: SgNode<TSX> | null): string[] {
   if (!node || node.kind() === "null") {
     return [];
   }
 
-  if (isMemberCall(node, "React", "__spread") || isMemberCall(node, "Object", "assign")) {
+  if (isReactSpreadCall(node) || isMemberCall(node, "Object", "assign")) {
     return callArguments(node).flatMap((arg) => propsToAttributes(arg));
   }
 
@@ -1213,6 +1235,8 @@ const transform: Transform<TSX> = async (root, options) => {
   if (!explicitRequireDisabled(options.params?.["explicit-require"]) && !hasReact(rootNode)) {
     return null;
   }
+
+  currentReactAliases = resolveReactAliases(rootNode);
 
   const canConvertCall = (call: SgNode<TSX>): boolean => {
     const cached = convertibility.get(call.id());

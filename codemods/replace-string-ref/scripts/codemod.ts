@@ -95,8 +95,9 @@ const transform: Transform<TSX> = async (root) => {
   const pureImport = getImport(rootNode, { type: "named", name: "PureComponent", from: "react" });
   const reactName = reactDefault?.alias ?? "React";
   const componentNames = new Set<string>();
-  if (componentImport) componentNames.add(componentImport.alias);
-  if (pureImport) componentNames.add(pureImport.alias);
+  // getImport falls back to namespaces for missing named specs — ignore those.
+  if (componentImport && !componentImport.isNamespace) componentNames.add(componentImport.alias);
+  if (pureImport && !pureImport.isNamespace) componentNames.add(pureImport.alias);
   const componentNamesList = Array.from(componentNames);
 
   const stringRefs = rootNode.findAll({

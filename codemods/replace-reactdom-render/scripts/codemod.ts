@@ -1,7 +1,7 @@
 import type { Transform, Edit, SgNode } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
-import { getImport } from "@jssg/utils/javascript/imports";
+import { addImport, getAllImports, getImport } from "@jssg/utils/javascript/imports";
 
 function reindentText(text: string, fromCol: number, toCol: number): string {
   if (fromCol === toCol) return text;
@@ -35,56 +35,21 @@ function importSource(node: SgNode<TSX>): string | null {
 }
 
 function findReactDomMemberImportNames(rootNode: SgNode<TSX, "program">): Set<string> {
-  const names = new Set<string>();
+  const names = new Set(
+    getAllImports(rootNode, { type: "default", from: "react-dom" }).map((imp) => imp.alias),
+  );
 
-  for (const imp of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(imp) !== "react-dom") continue;
-
-    const importClause = imp.find({ rule: { kind: "import_clause" } });
-    const defaultIdentifier = importClause?.children().find((child) => child.kind() === "identifier");
-    if (defaultIdentifier) names.add(defaultIdentifier.text());
-
-    const namespaceImport = imp.find({ rule: { kind: "namespace_import" } });
+  // getAllImports(type: "default") omits namespace imports when a default binding
+  // from the same module also exists — recover those aliases.
+  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
+    if (importSource(importNode) !== "react-dom") continue;
+    const namespaceImport = importNode.find({ rule: { kind: "namespace_import" } });
     const namespaceName =
       namespaceImport?.field("name") ?? namespaceImport?.find({ rule: { kind: "identifier" } });
     if (namespaceName) names.add(namespaceName.text());
   }
 
   return names;
-}
-
-function findNamedImportNames(rootNode: SgNode<TSX, "program">, exportedName: string): Set<string> {
-  const names = new Set<string>();
-
-  for (const importNode of rootNode.findAll({ rule: { kind: "import_statement" } })) {
-    if (importSource(importNode) !== "react-dom") continue;
-
-    for (const specifier of importNode.findAll({ rule: { kind: "import_specifier" } })) {
-      if (specifier.field("name")?.text() !== exportedName) continue;
-      names.add(specifier.field("alias")?.text() ?? exportedName);
-    }
-  }
-
-  return names;
-}
-
-function lineStartIndex(source: string, index: number): number {
-  let cursor = index;
-  while (cursor > 0 && source[cursor - 1] !== "\n" && source[cursor - 1] !== "\r") {
-    cursor--;
-  }
-  return cursor;
-}
-
-function nearestAncestorOfKind(node: SgNode<TSX>, kind: string): SgNode<TSX> | null {
-  let current = node.parent();
-  while (current) {
-    if (current.kind() === kind) {
-      return current;
-    }
-    current = current.parent();
-  }
-  return null;
 }
 
 function directExpressionStatement(node: SgNode<TSX>): SgNode<TSX> | null {
@@ -98,13 +63,27 @@ const transform: Transform<TSX> = async (root) => {
 
   const transformMetric = useMetricAtom("reactdom-render-replacements");
 
+  const reactDomMemberImports = getAllImports(rootNode, { type: "default", from: "react-dom" });
   const reactDomMemberImportNames = findReactDomMemberImportNames(rootNode);
-  const reactDomRenderImportNames = findNamedImportNames(rootNode, "render");
-  const reactDomUnmountImportNames = findNamedImportNames(rootNode, "unmountComponentAtNode");
+  const reactDomRenderImports = getAllImports(rootNode, { type: "named", name: "render", from: "react-dom" })
+    .filter((imp) => !imp.isNamespace);
+  const reactDomRenderImportNames = new Set(reactDomRenderImports.map((imp) => imp.alias));
+  const reactDomUnmountImports = getAllImports(rootNode, {
+    type: "named",
+    name: "unmountComponentAtNode",
+    from: "react-dom",
+  }).filter((imp) => !imp.isNamespace);
+  const reactDomUnmountImportNames = new Set(reactDomUnmountImports.map((imp) => imp.alias));
 
   if (reactDomMemberImportNames.size === 0 && reactDomRenderImportNames.size === 0 && reactDomUnmountImportNames.size === 0) {
     return null;
   }
+
+  const createRootModuleType =
+    [...reactDomMemberImports, ...reactDomRenderImports, ...reactDomUnmountImports]
+      .some((imp) => imp.moduleType === "esm")
+      ? "esm"
+      : "cjs";
 
   let hasTransformations = false;
   let rootIndex = 0;
@@ -325,11 +304,15 @@ const transform: Transform<TSX> = async (root) => {
     from: "react-dom/client",
   });
   if (!hasCreateRootImport) {
-    edits.push({
-      startPos: 0,
-      endPos: 0,
-      insertedText: 'import { createRoot } from "react-dom/client";\n',
+    const addEdit = addImport(rootNode, {
+      type: "named",
+      specifiers: [{ name: "createRoot" }],
+      from: "react-dom/client",
+      moduleType: createRootModuleType,
     });
+    if (addEdit) {
+      edits.push(addEdit);
+    }
   }
 
   return rootNode.commitEdits(edits);
