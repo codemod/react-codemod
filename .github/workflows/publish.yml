@@ -93,6 +93,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Workspace deps (e.g. @jssg/utils) must be installed before the CLI
+      # bundles scripts/codemod.ts during publish.
+      - run: pnpm install --frozen-lockfile
+
       - name: Publish codemod
         uses: codemod/publish-action@dd6c8dbc5ceb1a6146feba41481d88b43da50024 # v1
         with:
