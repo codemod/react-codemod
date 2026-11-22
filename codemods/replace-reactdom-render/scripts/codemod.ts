@@ -52,6 +52,15 @@ function findReactDomMemberImportNames(rootNode: SgNode<TSX, "program">): Set<st
   return names;
 }
 
+// Comments inside the call parens are children of `arguments` too; skip them so
+// they are not mistaken for positional arguments.
+function callArguments(args: SgNode<TSX>): SgNode<TSX>[] {
+  return args.children().filter((child) => {
+    const kind = child.kind();
+    return kind !== "(" && kind !== ")" && kind !== "," && kind !== "comment";
+  });
+}
+
 function directExpressionStatement(node: SgNode<TSX>): SgNode<TSX> | null {
   const parent = node.parent();
   return parent?.kind() === "expression_statement" ? parent : null;
@@ -107,9 +116,7 @@ const transform: Transform<TSX> = async (root) => {
     const args = call.field("arguments");
     if (!args) return;
 
-    const argList = args.children().filter((child) =>
-      child.kind() !== "(" && child.kind() !== ")" && child.kind() !== ","
-    );
+    const argList = callArguments(args);
 
     if (argList.length < 2) return;
 
@@ -122,14 +129,21 @@ const transform: Transform<TSX> = async (root) => {
     const rootName = nextRootName();
     const indent = getIndent(statement);
     const elementText = element.text();
+    // Keep comments written before the element (e.g. eslint directives on the JSX line).
+    const leadingComments = args.children().filter((child) =>
+      child.kind() === "comment" && child.range().end.index <= element.range().start.index
+    );
 
     let renderCall: string;
-    if (elementText.includes("\n")) {
-      const elementStartLine = sourceLines[element.range().start.line] ?? "";
-      const originalCol = elementStartLine.length - elementStartLine.trimStart().length;
+    if (elementText.includes("\n") || leadingComments.length > 0) {
       const desiredCol = indent.length + 2;
-      const reindented = reindentText(elementText, originalCol, desiredCol);
-      renderCall = `${rootName}.render(\n${" ".repeat(desiredCol)}${reindented}\n${indent})`;
+      const reindentNode = (node: SgNode<TSX>): string => {
+        const startLine = sourceLines[node.range().start.line] ?? "";
+        const originalCol = startLine.length - startLine.trimStart().length;
+        return " ".repeat(desiredCol) + reindentText(node.text(), originalCol, desiredCol);
+      };
+      const body = [...leadingComments, element].map(reindentNode).join("\n");
+      renderCall = `${rootName}.render(\n${body}\n${indent})`;
     } else {
       renderCall = `${rootName}.render(${elementText})`;
     }
@@ -148,9 +162,7 @@ const transform: Transform<TSX> = async (root) => {
     const args = call.field("arguments");
     if (!args) return;
 
-    const argList = args.children().filter((child) =>
-      child.kind() !== "(" && child.kind() !== ")" && child.kind() !== ","
-    );
+    const argList = callArguments(args);
 
     if (argList.length < 1) return;
 
