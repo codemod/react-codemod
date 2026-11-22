@@ -1,0 +1,11 @@
+{
+  "reactdom-render-replacements": [
+    {
+      "cardinality": {
+        "file": "tests/comment-inside-render/input.tsx",
+        "pattern": "render"
+      },
+      "count": 1
+    }
+  ]
+}
